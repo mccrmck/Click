@@ -10,7 +10,7 @@ Click {
 
 		StartUp.add{
 
-			SynthDef(\click,{
+			SynthDef(\clickSynth,{
 				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1.0,\curve.kr(-4)).kr(2);
 				var sig = LFTri.ar(\freq.kr(1000));                                        // or SinOsc.ar()?
 				sig = LPF.ar(sig,8000);                                                    // consider RLPF w/ low rq?
@@ -76,7 +76,7 @@ Click {
 			true,{
 				pattern = Pdef(key.asSymbol,
 					Pbind(
-						\instrument, \click,
+						\instrument, \clickSynth,
 						\dur, Pseq([dur],inf),
 						\freq, Pseq(1000 * bar,inf),
 						\amp, Pfunc({0.5}), // can this be an internal bus? dvs. can it be a getter and setter so that it can be updated while running?
