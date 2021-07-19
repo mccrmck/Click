@@ -1,2 +1,3 @@
 # Click
  
+Convenience class for creating click tracks for use with YAWN and other projects...
