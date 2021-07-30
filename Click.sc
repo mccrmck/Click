@@ -170,6 +170,7 @@ ClickLoop : Click {
 	reset { loopCues.put(cue, true) }
 
 	release { loopCues.put(cue, false) }
+
 }
 
 ClickEnv : Click {
@@ -221,21 +222,14 @@ ClickCue : Click {
 		}
 	}
 
-	init {
+	prMakePattern { |bar, name|
+		var dur = 60 / (bpm * beatDiv);
+		var cueBar = this.prMakeCueBar(bar);
+
 		//can evenutally make a Dictionary with several available sounds
 		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "Sounds" +/+ "cueBell.wav"; // this seems a bit messy, no?
 		bufnum = Buffer.read(Server.default,path);
 
-		this.prGenerateKey;
-		this.prCreateBarArray;
-		this.prMakePattern(barArray, name);
-
-		all.put(key,pattern);
-	}
-
-	prMakePattern { |bar, name|
-		var dur = 60 / (this.bpm * beatDiv);
-		var cueBar = this.prMakeCueBar(bar);
 		key = ("c" ++ name).asSymbol;
 
 		pattern = Pdef(key,
@@ -280,27 +274,27 @@ ClickCue : Click {
 	// *setBuf { |newBuf|  } // class method??? does this work?
 }
 
-// ClickCueMan : Click {}  ???????
-
 ClickMan : Click {
 
 	var beatArr;
 
 	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, pan = 0, amp = 0.5, out = 0|
-		^super.newCopyArgs("man", bpmArray.size, beatDiv, pan, amp, out, repeats).manInit(bpmArray);
+		// ^super.newCopyArgs("man", bpmArray.size, beatDiv, pan, amp, out, repeats).manInit(bpmArray);
+		^super.newCopyArgs("man", bpmArray.size, beatDiv, pan, amp, out, repeats).init.beatArr_(bpmArray); // I think this should work - must test!
 	}
 
+	/*
 	manInit { |bpmArray|
-		beatArr = bpmArray;
-		this.prGenerateKey;
-		this.prCreateBarArray;
-		this.prMakeManPat(barArray, name, bpmArray);
+	beatArr = bpmArray;
+	this.prGenerateKey;
+	this.prCreateBarArray;
+	this.prMakeManPat(barArray, name, bpmArray);
 
-		all.put(key,pattern);
-	}
+	all.put(key,pattern);
+	}*/
 
-	prMakeManPat { |bar, name, bpmArray|
-		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
+	prMakeManPat { |bar, name|
+		var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
 		key = name.asSymbol;
 
 		pattern = Pdef(key,
@@ -319,7 +313,7 @@ ClickMan : Click {
 	asLoop { |cueName|
 		var cue;
 		var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
-		this.key.postln;
+		this.clear;
 		key = ("l" ++ name).asSymbol;
 
 		if(cueName.isNil,{
@@ -351,3 +345,4 @@ ClickMan : Click {
 	}
 }
 
+// ClickCueMan : Click {}  ???????
