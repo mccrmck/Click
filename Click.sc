@@ -53,8 +53,7 @@ Click {
 		if(beats.isInteger.not || beatDiv.isInteger.not,{
 			beats = beats.floor;
 			beatDiv = beatDiv.floor;
-			"beats and beatDiv must be integers - they've been floored".warn
-
+			"beats and beatDiv must be integers - they've been floored".warn;
 		});
 
 		if(beatDiv > 1,{
@@ -71,15 +70,12 @@ Click {
 				barArray[0] = 2;
 			})
 		});
-
 		^barArray
 	}
 
 	prMakePattern { |bar, name|
 		var dur = 60 / (bpm * beatDiv);
-		key = ("t" ++ name).asSymbol;
-
-		// if repeats.isInteger or inf, etc. ?
+		key = ("c" ++ name).asSymbol;
 
 		pattern = Pdef(key,
 			Pbind(
@@ -91,7 +87,6 @@ Click {
 				\outBus, Pfunc({ out }),
 			)
 		);
-
 		^pattern
 	}
 
@@ -104,17 +99,22 @@ Click {
 		all.removeAt(key)
 	}
 
-	/*--- loop shit, must test ---*/
+	*clear { this.all.do.clear }  // check this???
+
+	/*--- convenience method shit, must test ---*/
 	asLoop { | cueKey |
 		// something like:
 		// remove key from Click.all, or is there a .replace method...also other cleanup stuff
 		// ClickLoop(bpm, beats, beatDiv, repeats, cueKey, pan, amp, out); does that work?
 	}
+
+	addCue {} // or .asCue? get the bell to follow the barArray, whether it's an Env, Man, etc. possible?
+
 }
 
 ClickLoop : Click {
 
-	var <>cue;
+	var <cue;
 
 	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, loopKey = nil, pan = 0, amp = 0.5, out = 0|
 		^super.newCopyArgs(bpm, beats, beatDiv, pan, amp, out, repeats).initLoop(loopKey);
@@ -136,7 +136,6 @@ ClickLoop : Click {
 		if(cueName.isNil,{
 			"no loopKey assigned: using pattern key".warn;
 			cue = key;
-
 		},{
 			cue = cueName.asSymbol;
 		});
@@ -155,7 +154,6 @@ ClickLoop : Click {
 		},{
 			"loop must have finite length".throw;
 		});
-
 		^pattern
 	}
 
@@ -165,62 +163,69 @@ ClickLoop : Click {
 		loopCues.removeAt(cue);
 	}
 
-	play { this.pattern.play; this.reset }
+	play { this.reset; this.pattern.play }
 
 	stop { this.pattern.stop; this.reset }
 
-	reset { loopCues.put(cue, true); }
+	reset { loopCues.put(cue, true) }
 
-	release { loopCues.put(this.cue, false) }
+	release { loopCues.put(cue, false) }
 }
 
 ClickEnv : Click {
 
-	// can pass in args to a Pseg? gotta figure this one out...
-
-
-	prMakePattern { |bar, name|
-		var dur = 60 / (this.bpm * beatDiv);
-		key = "e" ++ name;
-
-		pattern = Pdef(key.asSymbol,
-			Pbind(
-				\instrument, \clickSynth,
-				// \dur, Pseg(levels,durs,curves,repeats), // ??
-				\freq,Pseq(1000 * bar,repeats),
-				\pan, Pfunc({pan}),
-				\amp, Pfunc({amp}),
-				\outBus, Pfunc({out}),
-			)
-		)
-
-		^pattern
+	*new { |bpmStart = 60, bpmEnd = 120, beats = 1, beatDiv = 1, repeats = 1, dur = 4, curve = 'exp', pan = 0, amp = 0.5, out = 0|
+		^super.newCopyArgs("%e%".format(bpmStart, bpmEnd), beats, beatDiv, pan, amp, out, repeats).initEnv(bpmStart, bpmEnd, dur, curve);
 	}
 
-}
+	initEnv { |start, end, dur, curve|
+		this.prGenerateKey;
+		this.prCreateBarArray;
+		this.prMakeEnvPat(barArray, name, start, end, dur, curve);
 
+		all.put(key,pattern);
+	}
+
+	prMakeEnvPat { |bar, name, start, end, dur, curve|
+		var tempi = 60 / ([ start, end ] * beatDiv);
+		key = "%_%".format(name,dur.asString).asSymbol;
+
+		pattern = Pdef(key,
+			Pbind(
+				\instrument, \clickSynth,
+				\dur, Pseg(tempi,dur,curve,repeats),
+				\freq,Pseq(1000 * bar,inf),
+				\pan, Pfunc({ pan }),
+				\amp, Pfunc({ amp }),
+				\outBus, Pfunc({ out }),
+			)
+		)
+		^pattern
+	}
+}
 
 ClickCue : Click {
 
-	var bufnum;
+	classvar bufnum;
 
 	*initClass {
-
-		// Buffer.read(); //don't uncomment this unless it works - it impedes the interpreter booting process!
 
 		StartUp.add{
 
 			SynthDef(\clickCuePlayback, {
 				var bufnum = \bufnum.kr();
-				var sig = PlayBuf.ar(1,bufnum,BufRateScale.kr(bufnum) * \rate.kr(1),doneAction: 2);
+				var sig = PlayBuf.ar(1,bufnum,BufRateScale.kr(bufnum),doneAction: 2);
 				sig = Pan2.ar(sig,\pan.kr(0),\amp.kr(0.5));
 				OffsetOut.ar(\outBus.kr(0),sig);
 			}).add;
 		}
 	}
 
-	// maybe overwrite this one?
 	init {
+		//can evenutally make a Dictionary with several available sounds
+		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "Sounds" +/+ "cueBell.wav"; // this seems a bit messy, no?
+		bufnum = Buffer.read(Server.default,path);
+
 		this.prGenerateKey;
 		this.prCreateBarArray;
 		this.prMakePattern(barArray, name);
@@ -228,55 +233,121 @@ ClickCue : Click {
 		all.put(key,pattern);
 	}
 
-	// prCreateBarArray {} // create new function maybe? just for the cue click?
-
 	prMakePattern { |bar, name|
 		var dur = 60 / (this.bpm * beatDiv);
 		var cueBar = this.prMakeCueBar(bar);
-		key = "c" ++ name;
+		key = ("c" ++ name).asSymbol;
 
-		pattern = Pdef(key.asSymbol,
+		pattern = Pdef(key,
 
 			Ppar([
 				Pbind(
 					\instrument, \clickSynth,
 					\dur, Pseq([dur],inf),
 					\freq,Pseq(1000 * bar,repeats),
-					\amp, Pfunc({amp}),
-					\outBus, Pfunc({out}),
+					\pan, Pfunc({ pan }),
+					\amp, Pfunc({ amp }),
+					\outBus, Pfunc({ out }),
 				),
 
 				Pbind(
 					\instrument, \clickCuePlayback,
-					\dur, Pseq(cueBar,inf),
-					\bufnum, Pseq([bufnum],repeats),
+					\dur, Pseq([dur],inf),
+					\type, Pseq(cueBar,repeats),
+					\bufnum, Pseq([bufnum],inf), // Pfunc({ bufnum }) ?? If the bufnum can be updated, I think this is necessary..
+					\pan, Pfunc({ pan }),
 					\amp, Pfunc({ amp }),
 					\outBus, Pfunc({ out }),
 				)
 			])
 		)
-
 		^pattern
 	}
 
-	/*prMakeCueBar { |clickBar| //[ 2, 1, 1.5, 1, 1.5, 1, 1.5, 1 ] and look for 2s, for example...but Click(60,1,1) gives [1]!
+	prMakeCueBar { |clickBar|
+		var cueBar;
 
-	// clickBar.reshape -> separate at 2s, etc.
+		if(clickBar.size == 1,{
+			cueBar = Array.fill(clickBar.size,{\note})
+		},{
+			cueBar = clickBar.collect({ |item, i|
+				if(item == 2,{\note},{\rest})
+			})
+		});
+		^cueBar
+	}
 
-	^cueBar
-	}*/
-
-	// -must check -> some of the clicks have a long count in, some are shorter...make two separate methods? Boolean? two different Classes?
-	// -or just make this have more flexible arguments -> pass array for bell rhythms?
-
-
-	setBuf {} // class method
+	// *setBuf { |newBuf|  } // class method??? does this work?
 }
 
-/*
+// ClickCueMan : Click {}  ???????
+
 ClickMan : Click {
 
-// manual input of barArray and somehow durArray!! This is for asymmetric Clicks (the 11/8 riff, for example)
+	var beatArr;
 
+	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, pan = 0, amp = 0.5, out = 0|
+		^super.newCopyArgs("man", bpmArray.size, beatDiv, pan, amp, out, repeats).manInit(bpmArray);
+	}
+
+	manInit { |bpmArray|
+		beatArr = bpmArray;
+		this.prGenerateKey;
+		this.prCreateBarArray;
+		this.prMakeManPat(barArray, name, bpmArray);
+
+		all.put(key,pattern);
+	}
+
+	prMakeManPat { |bar, name, bpmArray|
+		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
+		key = name.asSymbol;
+
+		pattern = Pdef(key,
+			Pbind(
+				\instrument, \clickSynth,
+				\dur, Pseq(dur.flat,inf),
+				\freq, Pseq(1000 * bar,repeats),
+				\pan, Pfunc({ pan }),
+				\amp, Pfunc({ amp }),
+				\outBus, Pfunc({ out }),
+			)
+		);
+		^pattern
+	}
+
+	asLoop { |cueName|
+		var cue;
+		var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
+		this.key.postln;
+		key = ("l" ++ name).asSymbol;
+
+		if(cueName.isNil,{
+			"no loopKey assigned: using pattern key".warn;
+			cue = key;
+		},{
+			cue = cueName.asSymbol;
+		});
+
+		if(repeats != inf,{
+			pattern = Pdef(key,
+				Pbind(
+					\instrument, \clickSynth,
+					\dur, Pseq(dur.flat,inf),
+					\freq, Pwhile({ loopCues.at(cue) }, Pseq(1000 * barArray,repeats)),
+					\pan, Pfunc({ pan }),
+					\amp, Pfunc({ amp }),
+					\outBus, Pfunc({ out }),
+				)
+			)
+		},{
+			"loop must have finite length".throw;
+		});
+
+		all.put(key,pattern);
+		loopCues.put(cue,true);
+		^pattern
+
+	}
 }
-*/
+
