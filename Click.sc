@@ -341,7 +341,6 @@ ClickMan : Click {
 		all.put(key,pattern);
 		loopCues.put(cue,true);
 		^pattern
-
 	}
 }
 
