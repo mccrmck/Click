@@ -230,7 +230,7 @@ ClickCue : Click {
 		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "Sounds" +/+ "cueBell.wav"; // this seems a bit messy, no?
 		bufnum = Buffer.read(Server.default,path);
 
-		key = ("c" ++ name).asSymbol;
+		key = ("q" ++ name).asSymbol;
 
 		pattern = Pdef(key,
 
@@ -274,16 +274,16 @@ ClickCue : Click {
 	// *setBuf { |newBuf|  } // class method??? does this work?
 }
 
+
 ClickMan : Click {
 
 	var beatArr;
 
 	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, pan = 0, amp = 0.5, out = 0|
-		// ^super.newCopyArgs("man", bpmArray.size, beatDiv, pan, amp, out, repeats).manInit(bpmArray);
-		^super.newCopyArgs("man", bpmArray.size, beatDiv, pan, amp, out, repeats).init.beatArr_(bpmArray); // I think this should work - must test!
+		^super.newCopyArgs("man", bpmArray.size, beatDiv, pan, amp, out, repeats).manInit(bpmArray);
 	}
 
-	/*
+
 	manInit { |bpmArray|
 	beatArr = bpmArray;
 	this.prGenerateKey;
@@ -291,7 +291,7 @@ ClickMan : Click {
 	this.prMakeManPat(barArray, name, bpmArray);
 
 	all.put(key,pattern);
-	}*/
+	}
 
 	prMakeManPat { |bar, name|
 		var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
@@ -310,11 +310,11 @@ ClickMan : Click {
 		^pattern
 	}
 
-	asLoop { |cueName|
+	/*asLoop { |cueName|
 		var cue;
 		var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
 		this.clear;
-		key = ("l" ++ name).asSymbol;
+		key = ("m" ++ name).asSymbol;
 
 		if(cueName.isNil,{
 			"no loopKey assigned: using pattern key".warn;
@@ -341,7 +341,7 @@ ClickMan : Click {
 		all.put(key,pattern);
 		loopCues.put(cue,true);
 		^pattern
-	}
+	}*/
 }
 
 // ClickCueMan : Click {}  ???????
