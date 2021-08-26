@@ -4,6 +4,10 @@ Click {
 	var <bpm, <beats, <beatDiv, <>pan, <>amp, <>out, <repeats;
 	var name, barArray, <key, <>pattern;
 
+
+	// add clock stuff to be safe! Something like:
+	// clock = clock ? TempoClock.default;
+
 	*initClass {
 
 		all = IdentityDictionary.new;
@@ -219,6 +223,9 @@ ClickCue : Click {
 				sig = Pan2.ar(sig,\pan.kr(0),\amp.kr(0.5));
 				OffsetOut.ar(\outBus.kr(0),sig);
 			}).add;
+
+
+			// load buffers here?
 		}
 	}
 
@@ -248,7 +255,7 @@ ClickCue : Click {
 					\instrument, \clickCuePlayback,
 					\dur, Pseq([dur],inf),
 					\type, Pseq(cueBar,repeats),
-					\bufnum, Pseq([bufnum],inf), // Pfunc({ bufnum }) ?? If the bufnum can be updated, I think this is necessary..
+					\bufnum, Pfunc({ bufnum }),
 					\pan, Pfunc({ pan }),
 					\amp, Pfunc({ amp }),
 					\outBus, Pfunc({ out }),
@@ -271,7 +278,7 @@ ClickCue : Click {
 		^cueBar
 	}
 
-	// *setBuf { |newBuf|  } // class method??? does this work?
+	// setBuf { |newBuf|  } // Gotta figure this out...maybe select from already loaded buffers in the file? Dictionary?
 }
 
 
@@ -285,12 +292,12 @@ ClickMan : Click {
 
 
 	manInit { |bpmArray|
-	beatArr = bpmArray;
-	this.prGenerateKey;
-	this.prCreateBarArray;
-	this.prMakeManPat(barArray, name, bpmArray);
+		beatArr = bpmArray;
+		this.prGenerateKey;
+		this.prCreateBarArray;
+		this.prMakeManPat(barArray, name, bpmArray);
 
-	all.put(key,pattern);
+		all.put(key,pattern);
 	}
 
 	prMakeManPat { |bar, name|
@@ -311,36 +318,36 @@ ClickMan : Click {
 	}
 
 	/*asLoop { |cueName|
-		var cue;
-		var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
-		this.clear;
-		key = ("m" ++ name).asSymbol;
+	var cue;
+	var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
+	this.clear;
+	key = ("m" ++ name).asSymbol;
 
-		if(cueName.isNil,{
-			"no loopKey assigned: using pattern key".warn;
-			cue = key;
-		},{
-			cue = cueName.asSymbol;
-		});
+	if(cueName.isNil,{
+	"no loopKey assigned: using pattern key".warn;
+	cue = key;
+	},{
+	cue = cueName.asSymbol;
+	});
 
-		if(repeats != inf,{
-			pattern = Pdef(key,
-				Pbind(
-					\instrument, \clickSynth,
-					\dur, Pseq(dur.flat,inf),
-					\freq, Pwhile({ loopCues.at(cue) }, Pseq(1000 * barArray,repeats)),
-					\pan, Pfunc({ pan }),
-					\amp, Pfunc({ amp }),
-					\outBus, Pfunc({ out }),
-				)
-			)
-		},{
-			"loop must have finite length".throw;
-		});
+	if(repeats != inf,{
+	pattern = Pdef(key,
+	Pbind(
+	\instrument, \clickSynth,
+	\dur, Pseq(dur.flat,inf),
+	\freq, Pwhile({ loopCues.at(cue) }, Pseq(1000 * barArray,repeats)),
+	\pan, Pfunc({ pan }),
+	\amp, Pfunc({ amp }),
+	\outBus, Pfunc({ out }),
+	)
+	)
+	},{
+	"loop must have finite length".throw;
+	});
 
-		all.put(key,pattern);
-		loopCues.put(cue,true);
-		^pattern
+	all.put(key,pattern);
+	loopCues.put(cue,true);
+	^pattern
 	}*/
 }
 
