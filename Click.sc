@@ -103,7 +103,7 @@ Click {
 		all.removeAt(key)
 	}
 
-	*clear { this.all.do.clear }  // check this???
+	*clear { this.all.do.clear }  // check this??? Other examples use .copy.do....why?
 
 	/*--- convenience method shit, must test ---*/
 	asLoop { | cueKey |
