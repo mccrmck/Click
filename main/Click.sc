@@ -4,8 +4,7 @@ Click {
 	var <bpm, <beats, <beatDiv, <>pan, <>amp, <>out, <repeats;
 	var name, barArray, <key, <>pattern;
 
-
-	// add clock stuff to be safe! Something like:
+	// add clock stuff! Something like:
 	// clock = clock ? TempoClock.default;
 
 	*initClass {
