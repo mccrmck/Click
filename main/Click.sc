@@ -18,7 +18,7 @@ Click {
 				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1.0,\curve.kr(-4)).kr(2);
 				var sig = LFTri.ar(\freq.kr(1000));
 				sig = LPF.ar(sig,8000);
-				sig = Pan2.ar(sig * env,\pan.kr(0),\amp.kr(0.5));
+				sig = sig * env * \amp.kr(0.5);
 				OffsetOut.ar(\outBus.kr(0),sig);
 			}).add;
 		}
@@ -46,7 +46,7 @@ Click {
 			{"Mike's laziness doesn't curently support more than quintuplet subdivisions".postln}
 		);
 
-		name = "%_%%%".format(bpm,beats,subDiv,repeats).asSymbol;
+		name = "%_%%%%".format(bpm,beats,subDiv,repeats,out).asSymbol;
 
 		^name
 	}
@@ -85,8 +85,8 @@ Click {
 				\instrument, \clickSynth,
 				\dur, Pseq([ dur ],inf),
 				\freq, Pseq(1000 * bar,repeats),
-				\pan, Pfunc({ pan }),
-				\amp, Pfunc({ amp }),           // must test if several Clicks will read from the same Bus.control = amp
+				\pan, Pfunc({ pan }),               // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
+				\amp, Pfunc({ amp.value }),         // must test if several Clicks will read from the same Bus.control = amp
 				\outBus, Pfunc({ out }),
 			)
 		);
@@ -150,7 +150,7 @@ ClickLoop : Click {
 					\dur, Pseq([ dur ],inf),
 					\freq, Pwhile({ loopCues.at(cue) }, Pseq(1000 * bar,repeats)),
 					\pan, Pfunc({ pan }),
-					\amp, Pfunc({ amp }),
+					\amp, Pfunc({ amp.value }),
 					\outBus, Pfunc({ out }),
 				)
 			)
@@ -200,7 +200,7 @@ ClickEnv : Click {
 				\dur, Pseg(tempi,dur,curve,repeats),
 				\freq,Pseq(1000 * bar,inf),
 				\pan, Pfunc({ pan }),
-				\amp, Pfunc({ amp }),
+				\amp, Pfunc({ amp.value }),
 				\outBus, Pfunc({ out }),
 			)
 		)
@@ -216,10 +216,10 @@ ClickCue : Click {
 
 		StartUp.add{
 
-			SynthDef(\clickCuePlayback, {
+			SynthDef(\clickCuePlayback,{
 				var bufnum = \bufnum.kr();
 				var sig = PlayBuf.ar(1,bufnum,BufRateScale.kr(bufnum),doneAction: 2);
-				sig = Pan2.ar(sig,\pan.kr(0),\amp.kr(0.5));
+				sig = sig * \amp.kr(0.5);
 				OffsetOut.ar(\outBus.kr(0),sig);
 			}).add;
 
@@ -246,7 +246,7 @@ ClickCue : Click {
 					\dur, Pseq([dur],inf),
 					\freq,Pseq(1000 * bar,repeats),
 					\pan, Pfunc({ pan }),
-					\amp, Pfunc({ amp }),
+					\amp, Pfunc({ amp.value }),
 					\outBus, Pfunc({ out }),
 				),
 
@@ -256,7 +256,7 @@ ClickCue : Click {
 					\type, Pseq(cueBar,repeats),
 					\bufnum, Pfunc({ bufnum }),
 					\pan, Pfunc({ pan }),
-					\amp, Pfunc({ amp }),
+					\amp, Pfunc({ amp.value }),
 					\outBus, Pfunc({ out }),
 				)
 			])
@@ -309,7 +309,7 @@ ClickMan : Click {
 				\dur, Pseq(dur.flat,inf),
 				\freq, Pseq(1000 * bar,repeats),
 				\pan, Pfunc({ pan }),
-				\amp, Pfunc({ amp }),
+				\amp, Pfunc({ amp.value }),
 				\outBus, Pfunc({ out }),
 			)
 		);
