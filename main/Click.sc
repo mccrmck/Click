@@ -9,8 +9,8 @@ Click {
 
 	*initClass {
 
-		all = IdentityDictionary.new;
-		loopCues = IdentityDictionary.new;
+		all = IdentityDictionary();
+		loopCues = IdentityDictionary();
 
 		StartUp.add{
 
