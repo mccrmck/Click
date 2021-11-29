@@ -289,7 +289,6 @@ ClickMan : Click {
 		^super.newCopyArgs("man", bpmArray.size, beatDiv, pan, amp, out, repeats).manInit(bpmArray);
 	}
 
-
 	manInit { |bpmArray|
 		beatArr = bpmArray;
 		this.prGenerateKey;
