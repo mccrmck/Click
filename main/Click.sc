@@ -10,6 +10,12 @@ change repeats args to reps! fewer keystrokes..
 this needs to be reworked - the init functions keep fucking things up!
 
 
+generateKey {}
+
+createBarArray {}
+
+makePattern {}
+
 }
 */
 
@@ -248,7 +254,6 @@ ClickCue : Click {
 		key = ("q" ++ name).asSymbol;
 
 		pattern = Pdef(key,
-
 			Ppar([
 				Pbind(
 					\instrument, \clickSynth,
@@ -290,23 +295,20 @@ ClickCue : Click {
 
 ClickMan : Click {
 
-	var beatArr;
-
 	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
 		^super.newCopyArgs("man", bpmArray.size, beatDiv, amp, out, repeats).manInit(bpmArray);
 	}
 
 	manInit { |bpmArray|
-		beatArr = bpmArray;
 		this.prGenerateKey;
 		this.prCreateBarArray;
-		this.prMakeManPat(barArray, name, bpmArray);   // check this shit - this method only takes three args????
+		this.prMakeManPat(barArray, name, bpmArray);
 
 		all.put(key,pattern);
 	}
 
-	prMakeManPat { |bar, name|
-		var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
+	prMakeManPat { |bar, name, bpmArray|
+		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
 		key = name.asSymbol;
 
 		pattern = Pdef(key,
@@ -320,149 +322,177 @@ ClickMan : Click {
 		);
 		^pattern
 	}
-
-	/*asLoop { |cueName|
-	var cue;
-	var dur = 60 / (beatArr.stutter(beatDiv) * beatDiv);
-	this.clear;
-	key = ("m" ++ name).asSymbol;
-
-	if(cueName.isNil,{
-	"no loopKey assigned: using pattern key".warn;
-	cue = key;
-	},{
-	cue = cueName.asSymbol;
-	});
-
-	if(repeats != inf,{
-	pattern = Pdef(key,
-	Pbind(
-	\instrument, \clickSynth,
-	\dur, Pseq(dur.flat,inf),
-	\freq, Pwhile({ loopCues.at(cue) }, Pseq(1000 * barArray,repeats)),
-	\amp, Pfunc({ amp }),
-	\outBus, Pfunc({ out }),
-	)
-	)
-	},{
-	"loop must have finite length".throw;
-	});
-
-	all.put(key,pattern);
-	loopCues.put(cue,true);
-	^pattern
-	}*/
 }
+
+ClickManCue : Click {
+
+	var <cue;
+
+	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
+		^super.newCopyArgs("manCue", bpmArray.size, beatDiv, amp, out, repeats).manCueInit(bpmArray);
+	}
+
+	manCueInit { |bpmArray|
+		this.prGenerateKey;
+		this.prCreateBarArray;
+		this.prMakeManPat(barArray, name, bpmArray);
+
+		all.put(key,pattern);
+	}
+
+	prMakeManPat { |bar, name, bpmArray|
+		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
+		var cueBar = this.prMakeCueBar(bar);
+
+		//can evenutally make a Dictionary with several available sounds
+		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "Sounds" +/+ "cueBell.wav";            // this seems a bit messy, no?
+		var bufnum = Buffer.read(Server.default,path);
+
+		key = name.asSymbol;
+
+		pattern = Pdef(key,
+			Ppar([
+				Pbind(
+					\instrument, \clickSynth,
+					\dur, Pseq(dur.flat,inf),
+					\freq, Pseq(1000 * bar,repeats),
+					\amp, Pfunc({ amp.value }),
+					\outBus, Pfunc({ out }),
+				),
+
+				Pbind(
+					\instrument, \clickCuePlayback,
+					\dur, Pseq(dur.flat,inf),
+					\type, Pseq(cueBar,repeats),
+					\bufnum, Pfunc({ bufnum }),
+					\amp, Pfunc({ amp.value }),
+					\outBus, Pfunc({ out }),
+				)
+			])
+		);
+		^pattern
+	}
+
+	prMakeCueBar { |clickBar|
+		var cueBar;
+
+		if(clickBar.size == 1,{
+			cueBar = [\note]
+		},{
+			cueBar = clickBar.collect({ |item, i|
+				if(item == 2,{\note},{\rest})
+			})
+		});
+		^cueBar
+	}
+}
+
+/*----------------------------------------------------------------------------------------------*/
 
 ClickConCat : Click {                       // this should evenutally inherit from AbstractClick!
 
-	var <pattern;
+	var <conCatPat;
+	var clickArray, name;
 
 	*new { | repeats ...clicks |
-		^super.new.init2(repeats,clicks);  // this calls Click(), generating a click at every instance call...
+		^super.new.init2(repeats,clicks);  // this calls Click(), generating a click at every instance call...must rework this entire collection of classes
 	}
 
 	init2 { | repeats, clicks |
-		var array = clicks.asArray.flat.clickKeys;
-		var newKey = "cc%".format(repeats.asString);
-		array.do({ |key| newKey = newKey ++ key.asString});
-		newKey = newKey.removeEvery("_").asSymbol;
+		clickArray = clicks.asArray.flat.clickKeys;
+		this.prNewKey(repeats);
+		this.prConCatPat(name,repeats);
 
-		pattern = Pdef(newKey,
+		all.put(name,pattern);
+	}
+
+	prNewKey { | repeats |
+		var newKey = "cc%".format(repeats.asString);
+		clickArray.do({ |key| newKey = newKey ++ key.asString});
+		name = newKey.removeEvery("_").asSymbol;
+
+		^name
+	}
+
+	prConCatPat { |name, repeats|
+		conCatPat = Pdef(name,
 			Psym(
-				Pseq(array,repeats)
+				Pseq(clickArray,repeats)
 			)
 		);
 
-		all.put(newKey,pattern);
-
-		^pattern
+		^conCatPat
 	}
+
+	play { this.conCatPat.play }
+
+	stop { this.conCatPat.stop }
+
+
+	// HEEEEEEERE........and add these methods to ClickConCatLoop also!!
+	amp_ { |val| ^this}
+
+	out_ { |val| ^this}
+
+
+
+
+
+
 
 	// ++ {} // can I make this a shortcut method (w/ default repeat = 1) w/o adding it to the inherited classes?
 }
 
-ClickConCatCue : ClickConCat {
+ClickConCatLoop : Click {
 
-	var <pattern;
-
-	*new { | repeats ...clicks |
-		^super.new.init2(repeats,clicks);  // this calls Click(), generating a click at every instance call...
-	}
-
-	init2 { | repeats, clicks |
-		var cueBar = this.prConCatCueBar(clicks);                      // doesn't work yet!!
-
-
-		var array = clicks.asArray.flat.clickKeys;
-		var newKey = "cq%".format(repeats.asString);
-		array.do({ |key| newKey = newKey ++ key.asString});
-		newKey = newKey.removeEvery("_").asSymbol;
-
-		//prevent CLickLoops!
-
-
-		/*
-		pattern = Pdef(newKey,
-		Ppar([
-		Psym(
-		Pseq(array,repeats)
-		),
-		//cue bar goes here
-		])
-
-		);
-
-		all.put(newKey,pattern);
-
-		^pattern
-		*/
-	}
-
-	prConCatCueBar { |clicks|
-	}
-
-}
-
-ClickConCatLoop : ClickConCat {
-
-	var <pattern, <cue;
+	var <conCatPat, <conCatCue;
+	var clickArray, name;
 
 	*new { | loopKey ...clicks |
-		^super.new.init2loop(loopKey,clicks);  // this calls Click(), generating a click at every instance call...
+		^super.new.init2(loopKey,clicks);  // this calls Click(), generating a click at every instance call...
 	}
 
-	init2loop { | loopKey, clicks |
-		var array = clicks.asArray.flat.clickKeys;
+	init2 { | loopKey, clicks |
+		clickArray = clicks.asArray.flat.clickKeys;
+		this.prNewKeyAndCue(loopKey);
+		this.prConCatPat(conCatCue,repeats);
+
+		all.put(name,pattern);
+	}
+
+	prNewKeyAndCue { | loopKey |
 		var newKey = "cl";
-		array.do({ |key| newKey = newKey ++ key.asString});
-		newKey = newKey.removeEvery("_").asSymbol;
+		clickArray.do({ |key| newKey = newKey ++ key.asString});
+		name = newKey.removeEvery("_").asSymbol;
 
 		if(loopKey.isNil,{
 			"no loopKey assigned: using pattern key".warn;
-			cue = newKey;
+			conCatCue = newKey;
 		},{
-			cue = loopKey.asSymbol;
+			conCatCue = loopKey.asSymbol;
 		});
 
+		loopCues.put(conCatCue,true);
+
+		^name
+	}
+
+	prConCatPat { | conCatCue, clicks |
 		clicks.do({ |clk|
 			if(clk.isKindOf(ClickLoop),{"cannot loop a loop! Or can I?".throw})
 		});
 
-		array.postln;
-		pattern = Pdef(newKey,
-			Pwhile({ loopCues.at(cue) },
-				Psym(Pseq(array))
+		conCatPat = Pdef(conCatCue,
+			Pwhile({ loopCues.at(conCatCue) },
+				Psym(Pseq(clickArray))
 			)
 		);
 
-		all.put(newKey,pattern);
-		loopCues.put(cue,true);
-
-		^pattern
+		^conCatPat
 	}
+
+	play { this.conCatPat.play }
+
+	stop { this.conCatPat.stop }
+
 }
-
-// a = ClickConCatLoop(\test,ClickMan([1,4/3,1] * 100,1,8),Click(200,4))
-
-
