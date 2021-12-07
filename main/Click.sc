@@ -391,15 +391,16 @@ ClickManCue : Click {
 
 ClickConCat : Click {                       // this should evenutally inherit from AbstractClick!
 
-	var <conCatPat;
-	var clickArray, name;
+	var <conCatPat, <clickArray;
+	var clickKeysArray, name;
 
 	*new { | repeats ...clicks |
 		^super.new.init2(repeats,clicks);  // this calls Click(), generating a click at every instance call...must rework this entire collection of classes
 	}
 
 	init2 { | repeats, clicks |
-		clickArray = clicks.asArray.flat.clickKeys;
+		clickArray = clicks.asArray.flat;
+		clickKeysArray = clickArray.clickKeys;
 		this.prNewKey(repeats);
 		this.prConCatPat(name,repeats);
 
@@ -408,7 +409,7 @@ ClickConCat : Click {                       // this should evenutally inherit fr
 
 	prNewKey { | repeats |
 		var newKey = "cc%".format(repeats.asString);
-		clickArray.do({ |key| newKey = newKey ++ key.asString});
+		clickKeysArray.do({ |key| newKey = newKey ++ key.asString});
 		name = newKey.removeEvery("_").asSymbol;
 
 		^name
@@ -417,7 +418,7 @@ ClickConCat : Click {                       // this should evenutally inherit fr
 	prConCatPat { |name, repeats|
 		conCatPat = Pdef(name,
 			Psym(
-				Pseq(clickArray,repeats)
+				Pseq(clickKeysArray,repeats)
 			)
 		);
 
@@ -428,32 +429,37 @@ ClickConCat : Click {                       // this should evenutally inherit fr
 
 	stop { this.conCatPat.stop }
 
+	amp_ { |val|
+		this.clickArray.do({ |clk|
+			clk.amp = val;
+		});
 
-	// HEEEEEEERE........and add these methods to ClickConCatLoop also!!
-	amp_ { |val| ^this}
+		^this
+	}
 
-	out_ { |val| ^this}
+	out_ { |val|
+		this.clickArray.do({ |clk|
+			clk.out = val;
+		});
 
-
-
-
-
-
+		^this
+	}
 
 	// ++ {} // can I make this a shortcut method (w/ default repeat = 1) w/o adding it to the inherited classes?
 }
 
 ClickConCatLoop : Click {
 
-	var <conCatPat, <conCatCue;
-	var clickArray, name;
+	var <conCatPat, <conCatCue, <clickArray;
+	var clickKeysArray, name;
 
 	*new { | loopKey ...clicks |
 		^super.new.init2(loopKey,clicks);  // this calls Click(), generating a click at every instance call...
 	}
 
 	init2 { | loopKey, clicks |
-		clickArray = clicks.asArray.flat.clickKeys;
+		clickArray = clicks.asArray.flat;
+		clickKeysArray = clickArray.clickKeys;
 		this.prNewKeyAndCue(loopKey);
 		this.prConCatPat(conCatCue,repeats);
 
@@ -462,7 +468,7 @@ ClickConCatLoop : Click {
 
 	prNewKeyAndCue { | loopKey |
 		var newKey = "cl";
-		clickArray.do({ |key| newKey = newKey ++ key.asString});
+		clickKeysArray.do({ |key| newKey = newKey ++ key.asString});
 		name = newKey.removeEvery("_").asSymbol;
 
 		if(loopKey.isNil,{
@@ -484,7 +490,7 @@ ClickConCatLoop : Click {
 
 		conCatPat = Pdef(conCatCue,
 			Pwhile({ loopCues.at(conCatCue) },
-				Psym(Pseq(clickArray))
+				Psym(Pseq(clickKeysArray))
 			)
 		);
 
@@ -494,5 +500,21 @@ ClickConCatLoop : Click {
 	play { this.conCatPat.play }
 
 	stop { this.conCatPat.stop }
+
+	amp_ { |val|
+		this.clickArray.do({ |clk|
+			clk.amp = val;
+		});
+
+		^this
+	}
+
+	out_ { |val|
+		this.clickArray.do({ |clk|
+			clk.out = val;
+		});
+
+		^this
+	}
 
 }
