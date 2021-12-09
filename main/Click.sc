@@ -7,8 +7,12 @@ loopCues = IdentityDictionary();
 maybe the SynthDefs get loaded here as well???
 change repeats args to reps! fewer keystrokes..
 
-this needs to be reworked - the init functions keep fucking things up!
+this whole collection to be reworked - the init functions keep fucking things up!
+use an abstract class to tidy things up, make better use of inheritance!!
+the ConCat classes need an overhaul....
+why do I have both name and key??? that's absurd!!
 
+also, check out the .clickKeys method, to be safe...
 
 generateKey {}
 
@@ -40,7 +44,7 @@ Click {
 				var sig = LFTri.ar(\freq.kr(1000));
 				sig = LPF.ar(sig,8000);
 				sig = sig * env * \amp.kr(0.5);
-				OffsetOut.ar(\outBus.kr(0),sig);
+				OffsetOut.ar(\outBus.kr(),sig);
 			}).add;
 		}
 	}
@@ -259,7 +263,7 @@ ClickCue : Click {
 					\instrument, \clickSynth,
 					\dur, Pseq([dur],inf),
 					\freq,Pseq(1000 * bar,repeats),
-					\amp, Pfunc({ amp.value }),
+					\amp, Pfunc({ amp.value }) / 2,
 					\outBus, Pfunc({ out }),
 				),
 
@@ -268,7 +272,7 @@ ClickCue : Click {
 					\dur, Pseq([dur],inf),
 					\type, Pseq(cueBar,repeats),
 					\bufnum, Pfunc({ bufnum }),
-					\amp, Pfunc({ amp.value }),
+					\amp, Pfunc({ amp.value }) / 2,
 					\outBus, Pfunc({ out }),
 				)
 			])
@@ -391,8 +395,8 @@ ClickManCue : Click {
 
 ClickConCat : Click {                       // this should evenutally inherit from AbstractClick!
 
-	var <conCatPat, <clickArray;
-	var clickKeysArray, name;
+	var <conCatPat, <clickArray, <conCatKey;
+	var clickKeysArray;
 
 	*new { | repeats ...clicks |
 		^super.new.init2(repeats,clicks);  // this calls Click(), generating a click at every instance call...must rework this entire collection of classes
@@ -402,21 +406,21 @@ ClickConCat : Click {                       // this should evenutally inherit fr
 		clickArray = clicks.asArray.flat;
 		clickKeysArray = clickArray.clickKeys;
 		this.prNewKey(repeats);
-		this.prConCatPat(name,repeats);
+		this.prConCatPat(conCatKey,repeats);
 
-		all.put(name,pattern);
+		all.put(conCatKey,conCatPat);
 	}
 
 	prNewKey { | repeats |
 		var newKey = "cc%".format(repeats.asString);
 		clickKeysArray.do({ |key| newKey = newKey ++ key.asString});
-		name = newKey.removeEvery("_").asSymbol;
+		conCatKey = newKey.removeEvery("_").asSymbol;
 
-		^name
+		^conCatKey
 	}
 
-	prConCatPat { |name, repeats|
-		conCatPat = Pdef(name,
+	prConCatPat { |key, repeats|
+		conCatPat = Pdef(key,
 			Psym(
 				Pseq(clickKeysArray,repeats)
 			)
@@ -428,6 +432,8 @@ ClickConCat : Click {                       // this should evenutally inherit fr
 	play { this.conCatPat.play }
 
 	stop { this.conCatPat.stop }
+
+	key { ^this.conCatKey }
 
 	amp_ { |val|
 		this.clickArray.do({ |clk|
@@ -450,47 +456,48 @@ ClickConCat : Click {                       // this should evenutally inherit fr
 
 ClickConCatLoop : Click {
 
-	var <conCatPat, <conCatCue, <clickArray;
-	var clickKeysArray, name;
+	var <conCatPat, <conCatCue, <clickArray, <conCatKey;
+	var clickKeysArray;
 
 	*new { | loopKey ...clicks |
-		^super.new.init2(loopKey,clicks);  // this calls Click(), generating a click at every instance call...
+		^super.new.initCCLoop(loopKey,clicks);  // this calls Click(), generating a click at every instance call...
 	}
 
-	init2 { | loopKey, clicks |
+	initCCLoop { | loopKey, clicks |
 		clickArray = clicks.asArray.flat;
 		clickKeysArray = clickArray.clickKeys;
 		this.prNewKeyAndCue(loopKey);
-		this.prConCatPat(conCatCue,repeats);
+		this.prConCatLoop(conCatKey);
 
-		all.put(name,pattern);
+		all.put(conCatKey,conCatPat);
+		loopCues.put(conCatCue,true);
 	}
 
 	prNewKeyAndCue { | loopKey |
 		var newKey = "cl";
 		clickKeysArray.do({ |key| newKey = newKey ++ key.asString});
-		name = newKey.removeEvery("_").asSymbol;
+		conCatKey = newKey.removeEvery("_").asSymbol;
 
 		if(loopKey.isNil,{
 			"no loopKey assigned: using pattern key".warn;
-			conCatCue = newKey;
+			conCatCue = conCatKey;                                   //  conCatCue and conCatKey is garbage...fix all of this!
 		},{
 			conCatCue = loopKey.asSymbol;
 		});
 
-		loopCues.put(conCatCue,true);
-
-		^name
+		^conCatCue
 	}
 
-	prConCatPat { | conCatCue, clicks |
-		clicks.do({ |clk|
+	prConCatLoop { | conCatKey |
+
+		clickArray.do({ |clk|
 			if(clk.isKindOf(ClickLoop),{"cannot loop a loop! Or can I?".throw})
 		});
 
-		conCatPat = Pdef(conCatCue,
-			Pwhile({ loopCues.at(conCatCue) },
-				Psym(Pseq(clickKeysArray))
+		conCatPat = Pdef(conCatKey,
+			Psym(
+				Pwhile({ loopCues.at(conCatCue) }, Pseq(clickKeysArray)
+				)
 			)
 		);
 
@@ -500,6 +507,8 @@ ClickConCatLoop : Click {
 	play { this.conCatPat.play }
 
 	stop { this.conCatPat.stop }
+
+	key { ^this.conCatKey }
 
 	amp_ { |val|
 		this.clickArray.do({ |clk|
