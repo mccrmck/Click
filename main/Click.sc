@@ -1,28 +1,3 @@
-/*
-AbstractClick { // this might have to get added to the top of the chain at some point in order to fix some inheritance issues...
-
-all = IdentityDictionary();
-loopCues = IdentityDictionary();
-
-maybe the SynthDefs get loaded here as well???
-change repeats args to reps! fewer keystrokes..
-
-this whole collection to be reworked - the init functions keep fucking things up!
-use an abstract class to tidy things up, make better use of inheritance!!
-the ConCat classes need an overhaul....
-why do I have both name and key??? that's absurd!!
-
-also, check out the .clickKeys method, to be safe...
-
-generateKey {}
-
-createBarArray {}
-
-makePattern {}
-
-}
-*/
-
 Click {
 
 	classvar <all, <loopCues;
