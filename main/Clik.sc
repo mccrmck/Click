@@ -1,6 +1,7 @@
 AbstractClick {
+
 	classvar <all, <loopCues;
-	var	<bpm, <beats, <beatDiv, <repeats, <amp, <out;
+	var	<bpm, <beats, <beatDiv, <repeats, <>amp, <>out;
 	var <key, <pattern;
 
 	// add clock stuff..here?! Something like:
@@ -70,6 +71,19 @@ AbstractClick {
 		^barArray
 	}
 
+	makeCueBar { |clickBar|
+		var cueBar;
+
+		if(clickBar.size == 1,{
+			cueBar = [\note]
+		},{
+			cueBar = clickBar.collect({ |item, i|
+				if(item == 2,{\note},{\rest})
+			})
+		});
+		^cueBar
+	}
+
 	play { this.pattern.play }
 
 	stop { this.pattern.stop }
@@ -101,7 +115,7 @@ Clik : AbstractClick {
 		var dur = 60 / (bpm * beatDiv);
 		key = ("c" ++ prefix).asSymbol;
 
-		pattern = Pdef(key,
+		^Pdef(key,
 			Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseq([ dur ],inf),
@@ -110,12 +124,12 @@ Clik : AbstractClick {
 				\outBus, Pfunc({ out }),
 			)
 		);
-		^pattern
 	}
 
 }
 
 ClikLoop : AbstractClick {
+
 	var <loopCue;
 
 	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, loopKey = nil|
@@ -144,7 +158,7 @@ ClikLoop : AbstractClick {
 		});
 
 		if(repeats != inf,{
-			pattern = Pdef(key,
+			^Pdef(key,
 				Pbind(
 					\instrument, \clickSynth,
 					\dur, Pseq([ dur ],inf),
@@ -156,7 +170,6 @@ ClikLoop : AbstractClick {
 		},{
 			"loop must have finite length".throw;
 		});
-		^pattern
 	}
 
 	clear {
@@ -193,7 +206,7 @@ ClikEnv : AbstractClick {  // this has to be rethought a bit...I don't think the
 		var tempi = 60 / ([ start, end ] * beatDiv);
 		key = "%_%".format(prefix,dur.asString).asSymbol;              // this is weird, no?
 
-		pattern = Pdef(key,
+		^Pdef(key,
 			Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseg(tempi, dur, curve, repeats),
@@ -202,7 +215,6 @@ ClikEnv : AbstractClick {  // this has to be rethought a bit...I don't think the
 				\outBus, Pfunc({ out }),
 			)
 		)
-		^pattern
 	}
 }
 
@@ -232,13 +244,13 @@ ClikCue : AbstractClick {
 
 		key = ("q" ++ prefix).asSymbol;
 
-		pattern = Pdef(key,
+		^Pdef(key,
 			Ppar([
 				Pbind(
 					\instrument, \clickSynth,
 					\dur, Pseq([ dur ],inf),
 					\freq,Pseq(1000 * barArray,repeats),
-					\amp, Pfunc({ amp.value }) / 2,
+					\amp, Pfunc({ amp.value }) * -3.dbamp,
 					\outBus, Pfunc({ out }),
 				),
 
@@ -247,25 +259,11 @@ ClikCue : AbstractClick {
 					\dur, Pseq([ dur ],inf),
 					\type, Pseq(cueBar,repeats),
 					\bufnum, Pfunc({ bufnum }),
-					\amp, Pfunc({ amp.value }) / 2,
+					\amp, Pfunc({ amp.value }) * -3.dbamp,
 					\outBus, Pfunc({ out }),
 				)
 			])
 		)
-		^pattern
-	}
-
-	makeCuebar { |clickBar|
-		var cueBar;
-
-		if(clickBar.size == 1,{
-			cueBar = [\note]
-		},{
-			cueBar = clickBar.collect({ |item|
-				if(item == 2,{\note},{\rest})
-			})
-		});
-		^cueBar
 	}
 }
 
@@ -273,8 +271,6 @@ ClikMan : AbstractClick {
 
 	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
 		^super.newCopyArgs("man", bpmArray.size, beatDiv, repeats, amp, out).init(bpmArray);
-
-		//consider fixing the bpmArg..."man" could produce duplicates!
 	}
 
 	init { |bpmArray|
@@ -287,9 +283,9 @@ ClikMan : AbstractClick {
 
 	makePattern { |prefix, barArray, bpmArray|
 		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
-		key = prefix.asSymbol;                                              // not exactly waterproof, I realize now...
+		key = prefix.asSymbol;                                                                           // make more unique keys!!!
 
-		pattern = Pdef(key,
+		^Pdef(key,
 			Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseq(dur.flat,inf),
@@ -298,17 +294,15 @@ ClikMan : AbstractClick {
 				\outBus, Pfunc({ out }),
 			)
 		);
-		^pattern
 	}
 }
 
 ClikManCue : AbstractClick {                            // I could be wrong, but I think this can inherit from ClickMan w/ overwritten makePattern method??
+
 	classvar bufnum;
 
 	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
 		^super.newCopyArgs("manQ", bpmArray.size, beatDiv, repeats, amp, out).init(bpmArray);
-
-		//consider fixing the bpmArg..."manCue" could produce duplicates!
 	}
 
 	init { |bpmArray|
@@ -327,15 +321,15 @@ ClikManCue : AbstractClick {                            // I could be wrong, but
 		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "Sounds" +/+ "cueBell.wav";            // this seems a bit messy, no?
 		bufnum = Buffer.read(Server.default,path);
 
-		key = prefix.asSymbol;
+		key = prefix.asSymbol;                                                                           // make more unique keys!!!
 
-		pattern = Pdef(key,
+		^Pdef(key,
 			Ppar([
 				Pbind(
 					\instrument, \clickSynth,
 					\dur, Pseq(dur.flat,inf),
 					\freq, Pseq(1000 * barArray,repeats),
-					\amp, Pfunc({ amp.value }),
+					\amp, Pfunc({ amp.value }) * -3.dbamp,
 					\outBus, Pfunc({ out }),
 				),
 
@@ -344,115 +338,134 @@ ClikManCue : AbstractClick {                            // I could be wrong, but
 					\dur, Pseq(dur.flat,inf),
 					\type, Pseq(cueBar,repeats),
 					\bufnum, Pfunc({ bufnum }),
-					\amp, Pfunc({ amp.value }),
+					\amp, Pfunc({ amp.value }) * -3.dbamp,
 					\outBus, Pfunc({ out }),
 				)
 			])
 		);
-		^pattern
-	}
-
-	makeCueBar { |clickBar|
-		var cueBar;
-
-		if(clickBar.size == 1,{
-			cueBar = [\note]
-		},{
-			cueBar = clickBar.collect({ |item, i|
-				if(item == 2,{\note},{\rest})
-			})
-		});
-		^cueBar
 	}
 }
 
-
-
-
-
-// to work with the countIn system, I think bpm would have to get the bpm for the first click in the clickArray?
-ClikConCat : AbstractClick {    // consider inheriting from Object instead of AbstractClick...what is gained/lost??
+ClikConCat : AbstractClick {
 
 	var <clickArray;
-	var clickKeysArray;
 
-
-	*new { |repeats ...clicks|
-		^super.new.init(repeats, clicks);
+	*new { |reps ...clicks|
+		^super.new.amp_(0.5).out_(0).init(reps, clicks);
 	}
 
-	init { |repeats, clicks|
-		clickArray = clicks.asArray.flat;                   // this flattens things...but maybe it could also handle parallel patterns??? Could be nice..
-		clickKeysArray = clickArray.clickKeys;
+	init { |reps, clicks|
+		repeats = reps;
+		clickArray = clicks.asArray.flat;     // this flattens things...but could perhaps handle parallel patterns??? Could be nice..
 		this.makeConCatKey;
 		pattern = this.makePattern(key,repeats);
 
 		all.put(key,pattern);
 	}
 
-	/*makeConCatKey { | repeats |
+	makeConCatKey {
 		var newKey = "cc%".format(repeats.asString);
-		clickKeysArray.do({ |key| newKey = newKey ++ key.asString});   // get away from working with clickKeys - see below
+		var clickKeys = clickArray.deepCollect(3,{ |clk| clk.key });
+		clickKeys.do({ |clkKey| newKey = newKey ++ clkKey.asString});
 		key = newKey.removeEvery("_").asSymbol;
 
-		^conCatKey
-	}*/
-
-
-
-	makePattern { |key, repeats|
-
-
-		pattern = Pdef(key,
-			Psym(
-				Pseq(clickKeysArray,repeats)                 // after generating a unique key, this can just be a Pseq of Pdefs...no Psym shit
-			)
-		);
-		^pattern
+		^key
 	}
 
+	makePattern { |key, repeats|
+		var sumArray = clickArray.deepCollect(3,{ |clk| clk.pattern });
 
+		^Pdef(key,
+			Pseq(sumArray,repeats)
+		);
+	}
 
+	bpm { ^clickArray.first.bpm }
 
-
-
-
-
-
-
-	bpm {^this}
-	beats {^this}
-	beatDiv {^this}
-	repeats {^repeats}
+	beats { ^this }
+	beatDiv { ^this }
 
 	amp_ { |val|
-		/*this.clickArray.do({ |clk|
-		clk.amp = val;
-		});*/
+		amp = val;
+		clickArray.do({ |clk|                       // change this to deepDo if trying to accommodate parallel patterns?
+			clk.amp = amp;
+		});
 
 		^this
 	}
 
 	out_ { |val|
-		/*this.clickArray.do({ |clk|
-		clk.out = val;
-		});*/
+		out = val;
+		clickArray.do({ |clk|                       // change this to deepDo if trying to accommodate parallel patterns?
+			clk.out = out;
+		});
+
+		^this
+	}
+}
+
+ClikConCatLoop : AbstractClick {
+
+	var <clickArray, <loopCue;
+
+	*new { |loopKey ...clicks|
+		^super.new.amp_(0.5).out_(0).init(loopKey, clicks);
+	}
+
+	init { |loopKey, clicks|
+		clickArray = clicks.asArray.flat;                // this flattens things...but could perhaps handle parallel patterns??? Could be nice..
+		this.makeConCatKey;
+		pattern = this.makePattern(key,loopKey);
+
+		all.put(key,pattern);
+		loopCues.put(loopCue,true);
+	}
+
+	makeConCatKey {
+		var newKey = "cl";                                                 // make more unique keys!!!
+		var clickKeys = clickArray.deepCollect(3,{ |clk| clk.key });
+		clickKeys.do({ |clkKey| newKey = newKey ++ clkKey.asString});
+		key = newKey.removeEvery("_").asSymbol;
+
+		^key
+	}
+
+	makePattern { |key, loopKey|
+		var sumArray = clickArray.deepCollect(3,{ |clk| clk.pattern });
+
+		if(loopKey.isNil,{
+			"no loopKey assigned: using pattern key".warn;
+			loopCue = key;
+		},{
+			loopCue = loopKey.asSymbol;
+		});
+
+		^Pdef(key,
+			Pwhile({ loopCues.at(loopCue) }, Pseq(sumArray ) )
+		);
+	}
+
+	bpm { ^clickArray.first.bpm }
+
+	beats { ^this }
+	beatDiv { ^this }
+	repeats { ^this }
+
+	amp_ { |val|
+		amp = val;
+		clickArray.do({ |clk|                       // change this to deepDo if trying to accommodate parallel patterns?
+			clk.amp = amp;
+		});
 
 		^this
 	}
 
+	out_ { |val|
+		out = val;
+		clickArray.do({ |clk|                       // change this to deepDo if trying to accommodate parallel patterns?
+			clk.out = out;
+		});
+
+		^this
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
