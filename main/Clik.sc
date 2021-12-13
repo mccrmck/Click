@@ -1,7 +1,7 @@
 AbstractClick {
 
 	classvar <all, <loopCues;
-	var	<bpm, <beats, <beatDiv, <repeats, <>amp, <>out;
+	var <bpm, <beats, <beatDiv, <repeats, <>amp, <>out;
 	var <key, <pattern;
 
 	// add clock stuff..here?! Something like:
@@ -40,9 +40,7 @@ AbstractClick {
 			{ "Mike's laziness doesn't curently support more than quintuplet subdivisions".postln }
 		);
 
-		var prefix = "%_%%%o%".format(bpm,beats,subDiv,repeats,out).asSymbol;
-
-		^prefix
+		^"%_%%%o%".format(bpm,beats,subDiv,repeats,out).asSymbol;
 	}
 
 	makeBarArray {
@@ -239,7 +237,7 @@ ClikCue : AbstractClick {
 		var cueBar = this.makeCueBar(barArray);
 
 		//can evenutally make a Dictionary with several available sounds
-		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "Sounds" +/+ "cueBell.wav";                   // this seems a bit messy, no?
+		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";                   // this seems a bit messy, no?
 		bufnum = Buffer.read(Server.default,path);
 
 		key = ("q" ++ prefix).asSymbol;
@@ -318,7 +316,7 @@ ClikManCue : AbstractClick {                            // I could be wrong, but
 		var cueBar = this.makeCueBar(barArray);
 
 		//can evenutally make a Dictionary with several available sounds
-		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "Sounds" +/+ "cueBell.wav";            // this seems a bit messy, no?
+		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";            // this seems a bit messy, no?
 		bufnum = Buffer.read(Server.default,path);
 
 		key = prefix.asSymbol;                                                                           // make more unique keys!!!
