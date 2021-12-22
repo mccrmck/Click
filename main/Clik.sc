@@ -123,7 +123,86 @@ Clik : AbstractClick {
 			)
 		);
 	}
+}
 
+ClikCue : AbstractClick {
+
+	classvar bufnum;
+
+	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
+		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init;
+	}
+
+	init {
+		var prefix = this.makePrefix;
+		var barArray = this.makeBarArray;
+		pattern = this.makePattern(prefix, barArray);
+
+		all.put(key,pattern);
+	}
+
+	makePattern { |prefix, barArray|
+		var dur = 60 / (bpm * beatDiv);
+		var cueBar = this.makeCueBar(barArray);
+
+		//can evenutally make a Dictionary with several available sounds
+		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";                   // this seems a bit messy, no?
+		bufnum = Buffer.read(Server.default,path);
+
+		key = ("q" ++ prefix).asSymbol;
+
+		^Pdef(key,
+			Ppar([
+				Pbind(
+					\instrument, \clickSynth,
+					\dur, Pseq([ dur ],inf),
+					\freq,Pseq(1000 * barArray,repeats),
+					\amp, Pfunc({ amp.value }) * -3.dbamp,
+					\outBus, Pfunc({ out }),
+				),
+
+				Pbind(
+					\instrument, \clickCuePlayback,
+					\dur, Pseq([ dur ],inf),
+					\type, Pseq(cueBar,repeats),
+					\bufnum, Pfunc({ bufnum }),
+					\amp, Pfunc({ amp.value }) * -3.dbamp,
+					\outBus, Pfunc({ out }),
+				)
+			])
+		)
+	}
+}
+
+ClikEnv : AbstractClick {  // this has to be rethought a bit...I don't think the beats argument has any influence over the final outcome...
+
+	*new { |bpmStartEnd = ([60,120]), beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, dur = 4, curve = 'exp'|
+		if( bpmStartEnd.isArray.not or: {bpmStartEnd.size != 2},{"bpmStartEnd must be an Array of 2 values".throw} );
+		^super.newCopyArgs("%e%".format(bpmStartEnd[0], bpmStartEnd[1]), beats, beatDiv, repeats, amp, out).init(bpmStartEnd, dur, curve);
+	}
+
+	init { |bpmStartEnd, dur, curve|
+		var prefix = this.makePrefix;
+		var barArray = this.makeBarArray;
+		pattern = this.makePattern(prefix, barArray, bpmStartEnd[0], bpmStartEnd[1], dur, curve);
+
+		all.put(key,pattern);
+	}
+
+	makePattern { |prefix, barArray, start, end, dur, curve|
+		var tempi = 60 / ([ start, end ] * beatDiv);
+		key = "%_%".format(prefix,dur.asString).asSymbol;              // this is weird, no?
+
+		^Pdef(key,
+			Pbind(
+				\instrument, \clickSynth,
+				\dur, Pseg(tempi, dur, curve, repeats),
+				\freq,Pseq(1000 * barArray,inf),
+				\amp, Pfunc({ amp.value }),
+				\outBus, Pfunc({ out }),
+			)
+		)
+	}
 }
 
 ClikLoop : AbstractClick {
@@ -183,86 +262,6 @@ ClikLoop : AbstractClick {
 	reset { loopCues.put(loopCue, true) }
 
 	release { loopCues.put(loopCue, false) }
-}
-
-ClikEnv : AbstractClick {  // this has to be rethought a bit...I don't think the beats argument has any influence over the final outcome...
-
-	*new { |bpmStartEnd = ([60,120]), beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, dur = 4, curve = 'exp'|
-		if( bpmStartEnd.isArray.not or: {bpmStartEnd.size != 2},{"bpmStartEnd must be an Array of 2 values".throw} );
-		^super.newCopyArgs("%e%".format(bpmStartEnd[0], bpmStartEnd[1]), beats, beatDiv, repeats, amp, out).init(bpmStartEnd, dur, curve);
-	}
-
-	init { |bpmStartEnd, dur, curve|
-		var prefix = this.makePrefix;
-		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray, bpmStartEnd[0], bpmStartEnd[1], dur, curve);
-
-		all.put(key,pattern);
-	}
-
-	makePattern { |prefix, barArray, start, end, dur, curve|
-		var tempi = 60 / ([ start, end ] * beatDiv);
-		key = "%_%".format(prefix,dur.asString).asSymbol;              // this is weird, no?
-
-		^Pdef(key,
-			Pbind(
-				\instrument, \clickSynth,
-				\dur, Pseg(tempi, dur, curve, repeats),
-				\freq,Pseq(1000 * barArray,inf),
-				\amp, Pfunc({ amp.value }),
-				\outBus, Pfunc({ out }),
-			)
-		)
-	}
-}
-
-ClikCue : AbstractClick {
-
-	classvar bufnum;
-
-	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
-		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init;
-	}
-
-	init {
-		var prefix = this.makePrefix;
-		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray);
-
-		all.put(key,pattern);
-	}
-
-	makePattern { |prefix, barArray|
-		var dur = 60 / (bpm * beatDiv);
-		var cueBar = this.makeCueBar(barArray);
-
-		//can evenutally make a Dictionary with several available sounds
-		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";                   // this seems a bit messy, no?
-		bufnum = Buffer.read(Server.default,path);
-
-		key = ("q" ++ prefix).asSymbol;
-
-		^Pdef(key,
-			Ppar([
-				Pbind(
-					\instrument, \clickSynth,
-					\dur, Pseq([ dur ],inf),
-					\freq,Pseq(1000 * barArray,repeats),
-					\amp, Pfunc({ amp.value }) * -3.dbamp,
-					\outBus, Pfunc({ out }),
-				),
-
-				Pbind(
-					\instrument, \clickCuePlayback,
-					\dur, Pseq([ dur ],inf),
-					\type, Pseq(cueBar,repeats),
-					\bufnum, Pfunc({ bufnum }),
-					\amp, Pfunc({ amp.value }) * -3.dbamp,
-					\outBus, Pfunc({ out }),
-				)
-			])
-		)
-	}
 }
 
 ClikMan : AbstractClick {
@@ -343,6 +342,17 @@ ClikManCue : AbstractClick {                            // I could be wrong, but
 		);
 	}
 }
+
+ClikRest : AbstractClick {
+
+	*new {}
+
+	init {}
+
+	makePattern {}
+}
+
+/* === not sure what to call these....pseudoClicks? MetaClicks? === */
 
 ClikConCat : AbstractClick {
 
