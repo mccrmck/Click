@@ -174,9 +174,9 @@ ClickCue : AbstractClick {
 	}
 }
 
-ClickEnv : AbstractClick {  // this has to be rethought a bit...I don't think the beats argument has any influence over the final outcome...
+ClickEnv : AbstractClick {
 
-	*new { |bpmStartEnd = ([60,120]), beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, dur = 4, curve = 'exp'|
+	*new { |bpmStartEnd = ([60,120]), beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, dur = 4, curve = 'lin'|
 		if( bpmStartEnd.isArray.not or: {bpmStartEnd.size != 2},{"bpmStartEnd must be an Array of 2 values".throw} );
 		^super.newCopyArgs("%e%".format(bpmStartEnd[0], bpmStartEnd[1]), beats, beatDiv, repeats, amp, out).init(bpmStartEnd, dur, curve);
 	}
@@ -345,11 +345,28 @@ ClickManCue : AbstractClick {
 
 ClickRest : AbstractClick {
 
-	*new {}
+	*new { |bpm = 60, beats = 1, repeats = 1, out = 0|
+		^super.newCopyArgs(bpm, beats, 1, repeats, nil, out).init;            // is this the best way to handle amp, out args?
+	}
 
-	init {}
+	init {
+		var prefix = this.makePrefix;
+		pattern = this.makePattern(prefix);
 
-	makePattern {}
+		all.put(key,pattern);
+	}
+
+	makePattern { |prefix|
+		var dur = (60 / bpm) * beats;
+		key = ("shh" ++ prefix).asSymbol;
+
+		^Pdef(key,
+			Pbind(
+				\dur, Pseq([Rest(dur)],repeats),
+				\outBus, Pfunc({ out }),
+			)
+		);
+	}
 }
 
 /* === not sure what to call these....pseudoClicks? MetaClicks? === */
@@ -430,7 +447,7 @@ ClickConCatLoop : AbstractClick {
 	}
 
 	makeConCatKey {
-		var newKey = "cl";                                                 // make more unique keys!!!
+		var newKey = "cl";                                                 // make more unique key!!!
 		var clickKeys = clickArray.deepCollect(3,{ |clk| clk.key });
 		clickKeys.do({ |clkKey| newKey = newKey ++ clkKey.asString});
 		key = newKey.removeEvery("_").asSymbol;
