@@ -118,7 +118,7 @@ Click : AbstractClick {
 				\instrument, \clickSynth,
 				\dur, Pseq([ dur ],inf),
 				\freq, Pseq(1000 * barArray,repeats),     // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
-				\amp, Pfunc({ amp.value }),         // must test if several Clicks will read from the same Bus.control = amp
+				\amp, Pfunc({ amp.value }),
 				\outBus, Pfunc({ out }),
 			)
 		);
