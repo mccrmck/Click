@@ -91,6 +91,12 @@ AbstractClick {
 		all.removeAt(key)
 	}
 
+	duration {
+		var beatDur = 60 / this.bpm;
+		var dur = beatDur * beats * repeats;
+		^dur
+	}
+
 	*clear { this.all.do.clear }  // check this??? Other examples use .copy.do....why?
 
 }
@@ -176,32 +182,53 @@ ClickCue : AbstractClick {
 
 ClickEnv : AbstractClick {
 
-	*new { |bpmStartEnd = ([60,120]), beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, dur = 4, curve = 'lin'|
+	var firstBpm, <tempoArray;
+
+	*new { |bpmStartEnd = #[60,120], beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, curve = 0|
 		if( bpmStartEnd.isArray.not or: {bpmStartEnd.size != 2},{"bpmStartEnd must be an Array of 2 values".throw} );
-		^super.newCopyArgs("%e%".format(bpmStartEnd[0], bpmStartEnd[1]), beats, beatDiv, repeats, amp, out).init(bpmStartEnd, dur, curve);
+		^super.newCopyArgs("%e%".format(bpmStartEnd[0], bpmStartEnd[1]), beats, beatDiv, repeats, amp, out).init(bpmStartEnd, curve);
 	}
 
-	init { |bpmStartEnd, dur, curve|
+	init { |bpmStartEnd, curve, dur|
 		var prefix = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray, bpmStartEnd[0], bpmStartEnd[1], dur, curve);
+		pattern = this.makePattern(prefix, barArray, bpmStartEnd, curve);
+		firstBpm = bpmStartEnd[0];
 
 		all.put(key,pattern);
 	}
 
-	makePattern { |prefix, barArray, start, end, dur, curve|
-		var tempi = 60 / ([ start, end ] * beatDiv);
-		key = "%_%".format(prefix,dur.asString).asSymbol;              // this is weird, no?
+	makePattern { |prefix, barArray, bpmStartEnd, curve|
+		var strokes = beats * beatDiv;
+		var bpms = bpmStartEnd * beatDiv;
+		tempoArray = Array.fill(strokes,{ |i| i.lincurve(0, strokes-1, bpms[0], bpms[1], curve) });
+
+		key = "%_%".format(prefix,curve).asSymbol;              // can I make better keys?
 
 		^Pdef(key,
 			Pbind(
 				\instrument, \clickSynth,
-				\dur, Pseg(tempi, dur, curve, repeats),
-				\freq,Pseq(1000 * barArray,inf),
+				\dur, Pseq( 60/tempoArray,repeats ),
+				\freq,Pseq( 1000 * barArray,inf ),
 				\amp, Pfunc({ amp.value }),
 				\outBus, Pfunc({ out }),
 			)
 		)
+	}
+
+	bpm { ^firstBpm }
+
+	duration {
+		var durs = (60/this.tempoArray).sum;
+		durs = durs * repeats;
+		durs = durs.round(0.01); // this will possibly create math discrepancies of up to 1ms...should I fix?
+		^durs
+	}
+
+	plot {
+		(this.tempoArray / this.beatDiv).plot;
+
+		^this
 	}
 }
 
@@ -266,7 +293,9 @@ ClickLoop : AbstractClick {
 
 ClickMan : AbstractClick {
 
-	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
+	var bpms;
+
+	*new { |bpmArray = #[60], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
 		^super.newCopyArgs("man", bpmArray.size, beatDiv, repeats, amp, out).init(bpmArray);
 	}
 
@@ -274,6 +303,7 @@ ClickMan : AbstractClick {
 		var prefix = this.makePrefix;
 		var barArray = this.makeBarArray;
 		pattern = this.makePattern(prefix, barArray, bpmArray);
+		bpms = bpmArray;
 
 		all.put(key,pattern);
 	}
@@ -292,13 +322,22 @@ ClickMan : AbstractClick {
 			)
 		);
 	}
+
+	bpm { ^bpms.first }
+
+	duration {
+		var barDur = (60 / bpms).sum;
+		var dur = barDur * repeats;
+		^dur
+	}
 }
 
 ClickManCue : AbstractClick {
 
 	classvar bufnum;
+	var bpms;
 
-	*new { |bpmArray = ([60]), beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
+	*new { |bpmArray = #[60], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
 		^super.newCopyArgs("manQ", bpmArray.size, beatDiv, repeats, amp, out).init(bpmArray);
 	}
 
@@ -306,6 +345,7 @@ ClickManCue : AbstractClick {
 		var prefix = this.makePrefix;
 		var barArray = this.makeBarArray;
 		pattern = this.makePattern(prefix, barArray, bpmArray);
+		bpms = bpmArray;
 
 		all.put(key,pattern);
 	}
@@ -340,6 +380,14 @@ ClickManCue : AbstractClick {
 				)
 			])
 		);
+	}
+
+	bpm { ^bpms.first }
+
+	duration {
+		var barDur = (60 / bpms).sum;
+		var dur = barDur * repeats;
+		^dur
 	}
 }
 
@@ -427,6 +475,14 @@ ClickConCat : AbstractClick {
 
 		^this
 	}
+
+	duration {
+		var durs = clickArray.collect({ |clk|
+			clk.duration
+		});
+		durs = durs.sum * repeats;
+		^durs
+	}
 }
 
 ClickConCatLoop : AbstractClick {
@@ -492,5 +548,13 @@ ClickConCatLoop : AbstractClick {
 		});
 
 		^this
+	}
+
+	duration {
+		var durs = clickArray.collect({ |clk|
+			clk.duration
+		});
+		durs = durs.sum * repeats;
+		^durs
 	}
 }
