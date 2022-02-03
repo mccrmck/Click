@@ -1,6 +1,6 @@
 AbstractClick {
 
-	classvar <all, <loopCues;
+	classvar <all, <loopCues, <cueBuf;
 	var <bpm, <beats, <beatDiv, <repeats, <>amp, <>out;
 	var <key, <pattern;
 
@@ -12,6 +12,8 @@ AbstractClick {
 		loopCues = IdentityDictionary();
 
 		StartUp.add{
+			var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";                   // this seems a bit messy, no?
+			cueBuf = Buffer.read(Server.default,path);
 
 			SynthDef(\clickSynth,{
 				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1.0,\curve.kr(-4)).kr(2);
@@ -133,8 +135,6 @@ Click : AbstractClick {
 
 ClickCue : AbstractClick {
 
-	classvar bufnum;
-
 	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
 		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init;
 	}
@@ -150,10 +150,6 @@ ClickCue : AbstractClick {
 	makePattern { |prefix, barArray|
 		var dur = 60 / (bpm * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
-
-		//can evenutally make a Dictionary with several available sounds
-		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";                   // this seems a bit messy, no?
-		bufnum = Buffer.read(Server.default,path);
 
 		key = ("q" ++ prefix).asSymbol;
 
@@ -171,7 +167,7 @@ ClickCue : AbstractClick {
 					\instrument, \clickCuePlayback,
 					\dur, Pseq([ dur ],inf),
 					\type, Pseq(cueBar,repeats),
-					\bufnum, Pfunc({ bufnum }),
+					\bufnum, Pfunc({ cueBuf }),
 					\amp, Pfunc({ amp.value }) * -3.dbamp,
 					\outBus, Pfunc({ out }),
 				)
@@ -334,7 +330,6 @@ ClickMan : AbstractClick {
 
 ClickManCue : AbstractClick {
 
-	classvar bufnum;
 	var bpms;
 
 	*new { |bpmArray = #[60], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
@@ -354,10 +349,6 @@ ClickManCue : AbstractClick {
 		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
 
-		//can evenutally make a Dictionary with several available sounds
-		var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";            // this seems a bit messy, no?
-		bufnum = Buffer.read(Server.default,path);
-
 		key = prefix.asSymbol;                                                                           // make more unique keys!!!
 
 		^Pdef(key,
@@ -374,7 +365,7 @@ ClickManCue : AbstractClick {
 					\instrument, \clickCuePlayback,
 					\dur, Pseq(dur.flat,inf),
 					\type, Pseq(cueBar,repeats),
-					\bufnum, Pfunc({ bufnum }),
+					\bufnum, Pfunc({ cueBuf }),
 					\amp, Pfunc({ amp.value }) * -3.dbamp,
 					\outBus, Pfunc({ out }),
 				)
