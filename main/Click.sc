@@ -12,7 +12,7 @@ AbstractClick {
 		loopCues = IdentityDictionary();
 
 		StartUp.add{
-			var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";                   // this seems a bit messy, no?
+			var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";  // is this the best way to do this?
 			cueBuf = Buffer.read(Server.default,path);
 
 			SynthDef(\clickSynth,{
@@ -125,8 +125,8 @@ Click : AbstractClick {
 			Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseq([ dur ],inf),
-				\freq, Pseq(1000 * barArray,repeats),     // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
-				\amp, Pfunc({ amp.value }),
+				\freq, Pseq(1000 * barArray,repeats),
+				\amp, Pfunc({ amp.value }),       // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
 				\outBus, Pfunc({ out }),
 			)
 		);
