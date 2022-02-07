@@ -4,7 +4,7 @@ AbstractClick {
 	var <bpm, <beats, <beatDiv, <repeats, <>amp, <>out;
 	var <key, <pattern;
 
-	// add clock stuff..here?! Something like:
+	// add clock stuff.here?! Something like:
 	// clock = clock ? TempoClock.default;
 
 	*initClass{
@@ -12,8 +12,12 @@ AbstractClick {
 		loopCues = IdentityDictionary();
 
 		StartUp.add{
-			var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";  // is this the best way to do this?
-			cueBuf = Buffer.read(Server.default,path);
+			var server = Server.default;
+
+			ServerBoot.add({
+				var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";  // is this the best way to do this?
+				cueBuf = Buffer.read(server,path);
+			},server);
 
 			SynthDef(\clickSynth,{
 				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1.0,\curve.kr(-4)).kr(2);
@@ -62,7 +66,7 @@ AbstractClick {
 			barArray[0] = 2;
 		},{
 			if(beats == 1,{
-				barArray = [1]
+				barArray = [2]
 			},{
 				barArray = Array.fill(beats,{1});
 				barArray[0] = 2;
