@@ -219,7 +219,7 @@ ClickEnv : AbstractClick {
 	bpm { ^firstBpm }
 
 	duration {
-		var durs = (60/this.tempoArray).sum;
+		var durs = (60 / this.tempoArray).sum;
 		durs = durs * repeats;
 		durs = durs.round(0.01); // this will possibly create math discrepancies of up to 1ms...should I fix?
 		^durs
@@ -353,7 +353,7 @@ ClickManCue : AbstractClick {
 		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
 
-		key = prefix.asSymbol;                                                                           // make more unique keys!!!
+		key = prefix.asSymbol;                                                   // make more unique keys!!!
 
 		^Pdef(key,
 			Ppar([
