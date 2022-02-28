@@ -24,7 +24,7 @@ AbstractClick {
 				var sig = LFTri.ar(\freq.kr(1000));
 				sig = LPF.ar(sig,8000);
 				sig = sig * env * \amp.kr(0.5);
-				OffsetOut.ar(\outBus.kr(),sig);
+				OffsetOut.ar(\outBus.kr(0),sig);
 			}).add;
 
 			SynthDef(\clickCuePlayback,{
@@ -125,15 +125,13 @@ Click : AbstractClick {
 		var dur = 60 / (bpm * beatDiv);
 		key = ("c" ++ prefix).asSymbol;
 
-		^Pdef(key,
-			Pbind(
-				\instrument, \clickSynth,
-				\dur, Pseq([ dur ],inf),
-				\freq, Pseq(1000 * barArray,repeats),
-				\amp, Pfunc({ amp.value }),       // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
-				\outBus, Pfunc({ out }),
-			)
-		);
+		^Pbind(
+			\instrument, \clickSynth,
+			\dur, Pseq([ dur ],inf),
+			\freq, Pseq(1000 * barArray,repeats),
+			\amp, Pfunc({ amp.value }),       // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
+			\outBus, Pfunc({ out }),
+		)
 	}
 }
 
@@ -157,26 +155,24 @@ ClickCue : AbstractClick {
 
 		key = ("q" ++ prefix).asSymbol;
 
-		^Pdef(key,
-			Ppar([
-				Pbind(
-					\instrument, \clickSynth,
-					\dur, Pseq([ dur ],inf),
-					\freq,Pseq(1000 * barArray,repeats),
-					\amp, Pfunc({ amp.value }) * -3.dbamp,
-					\outBus, Pfunc({ out }),
-				),
+		^Ppar([
+			Pbind(
+				\instrument, \clickSynth,
+				\dur, Pseq([ dur ],inf),
+				\freq,Pseq(1000 * barArray,repeats),
+				\amp, Pfunc({ amp.value }) * -3.dbamp,
+				\outBus, Pfunc({ out }),
+			),
 
-				Pbind(
-					\instrument, \clickCuePlayback,
-					\dur, Pseq([ dur ],inf),
-					\type, Pseq(cueBar,repeats),
-					\bufnum, Pfunc({ cueBuf }),
-					\amp, Pfunc({ amp.value }) * -3.dbamp,
-					\outBus, Pfunc({ out }),
-				)
-			])
-		)
+			Pbind(
+				\instrument, \clickCuePlayback,
+				\dur, Pseq([ dur ],inf),
+				\type, Pseq(cueBar,repeats),
+				\bufnum, Pfunc({ cueBuf }),
+				\amp, Pfunc({ amp.value }) * -3.dbamp,
+				\outBus, Pfunc({ out }),
+			)
+		])
 	}
 }
 
@@ -205,14 +201,12 @@ ClickEnv : AbstractClick {
 
 		key = "%_%".format(prefix,curve).asSymbol;              // can I make better keys?
 
-		^Pdef(key,
-			Pbind(
-				\instrument, \clickSynth,
-				\dur, Pseq( 60/tempoArray,repeats ),
-				\freq,Pseq( 1000 * barArray,inf ),
-				\amp, Pfunc({ amp.value }),
-				\outBus, Pfunc({ out }),
-			)
+		^Pbind(
+			\instrument, \clickSynth,
+			\dur, Pseq( 60/tempoArray,repeats ),
+			\freq,Pseq( 1000 * barArray,inf ),
+			\amp, Pfunc({ amp.value }),
+			\outBus, Pfunc({ out }),
 		)
 	}
 
@@ -262,14 +256,12 @@ ClickLoop : AbstractClick {
 		});
 
 		if(repeats != inf,{
-			^Pdef(key,
-				Pbind(
-					\instrument, \clickSynth,
-					\dur, Pseq([ dur ],inf),
-					\freq, Pwhile({ loopCues.at(loopCue) }, Pseq(1000 * barArray,repeats)),
-					\amp, Pfunc({ amp.value }),
-					\outBus, Pfunc({ out }),
-				)
+			^Pbind(
+				\instrument, \clickSynth,
+				\dur, Pseq([ dur ],inf),
+				\freq, Pwhile({ loopCues.at(loopCue) }, Pseq(1000 * barArray,repeats)),
+				\amp, Pfunc({ amp.value }),
+				\outBus, Pfunc({ out }),
 			)
 		},{
 			"loop must have finite length".throw;
@@ -312,14 +304,12 @@ ClickMan : AbstractClick {
 		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
 		key = prefix.asSymbol;                                                                           // make more unique keys!!!
 
-		^Pdef(key,
-			Pbind(
-				\instrument, \clickSynth,
-				\dur, Pseq(dur.flat,inf),
-				\freq, Pseq(1000 * barArray,repeats),
-				\amp, Pfunc({ amp.value }),
-				\outBus, Pfunc({ out }),
-			)
+		^Pbind(
+			\instrument, \clickSynth,
+			\dur, Pseq(dur.flat,inf),
+			\freq, Pseq(1000 * barArray,repeats),
+			\amp, Pfunc({ amp.value }),
+			\outBus, Pfunc({ out }),
 		);
 	}
 
@@ -355,26 +345,24 @@ ClickManCue : AbstractClick {
 
 		key = prefix.asSymbol;                                                   // make more unique keys!!!
 
-		^Pdef(key,
-			Ppar([
-				Pbind(
-					\instrument, \clickSynth,
-					\dur, Pseq(dur.flat,inf),
-					\freq, Pseq(1000 * barArray,repeats),
-					\amp, Pfunc({ amp.value }) * -3.dbamp,
-					\outBus, Pfunc({ out }),
-				),
+		^Ppar([
+			Pbind(
+				\instrument, \clickSynth,
+				\dur, Pseq(dur.flat,inf),
+				\freq, Pseq(1000 * barArray,repeats),
+				\amp, Pfunc({ amp.value }) * -3.dbamp,
+				\outBus, Pfunc({ out }),
+			),
 
-				Pbind(
-					\instrument, \clickCuePlayback,
-					\dur, Pseq(dur.flat,inf),
-					\type, Pseq(cueBar,repeats),
-					\bufnum, Pfunc({ cueBuf }),
-					\amp, Pfunc({ amp.value }) * -3.dbamp,
-					\outBus, Pfunc({ out }),
-				)
-			])
-		);
+			Pbind(
+				\instrument, \clickCuePlayback,
+				\dur, Pseq(dur.flat,inf),
+				\type, Pseq(cueBar,repeats),
+				\bufnum, Pfunc({ cueBuf }),
+				\amp, Pfunc({ amp.value }) * -3.dbamp,
+				\outBus, Pfunc({ out }),
+			)
+		]);
 	}
 
 	bpm { ^bpms.first }
@@ -403,11 +391,9 @@ ClickRest : AbstractClick {
 		var dur = (60 / bpm) * beats;
 		key = ("shh" ++ prefix).asSymbol;
 
-		^Pdef(key,
-			Pbind(
-				\dur, Pseq([Rest(dur)],repeats),
-				\outBus, Pfunc({ out }),
-			)
+		^Pbind(
+			\dur, Pseq([ Rest(dur) ],repeats),
+			\outBus, Pfunc({ out }),
 		);
 	}
 }
@@ -443,9 +429,7 @@ ClickConCat : AbstractClick {
 	makePattern { |key, repeats|
 		var sumArray = clickArray.deepCollect(3,{ |clk| clk.pattern });
 
-		^Pdef(key,
-			Pseq(sumArray,repeats)
-		);
+		^Pseq(sumArray,repeats)
 	}
 
 	bpm { ^clickArray.first.bpm }
@@ -516,9 +500,7 @@ ClickConCatLoop : AbstractClick {
 			loopCue = loopKey.asSymbol;
 		});
 
-		^Pdef(key,
-			Pwhile({ loopCues.at(loopCue) }, Pseq(sumArray) )
-		);
+		^Pwhile({ loopCues.at(loopCue) }, Pseq(sumArray) )
 	}
 
 	bpm { ^clickArray.first.bpm }
