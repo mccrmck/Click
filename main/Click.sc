@@ -10,14 +10,14 @@ AbstractClick {
 	*initClass{
 		all = IdentityDictionary();
 		loopCues = IdentityDictionary();
+		// cueBufs = IdentityDictionary(); // load all buffers by key and be able to call them in the .new method...should it be gettable and settable
 
 		StartUp.add{
-			var server = Server.default;
 
-			ServerBoot.add({
-				var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "cueBell.wav";  // is this the best way to do this?
+			ServerBoot.add({ |server|
+				var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "bell.wav";  // is this the best way to do this?
 				cueBuf = Buffer.read(server,path);
-			},server);
+			},\default);
 
 			SynthDef(\clickSynth,{
 				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1.0,\curve.kr(-4)).kr(2);
