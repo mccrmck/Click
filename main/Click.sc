@@ -88,9 +88,9 @@ AbstractClick {
 		^cueBar
 	}
 
-	play { this.pattern.play }
+	play { ^this.pattern.play }
 
-	stop { this.pattern.stop }
+	stop { ^this.pattern.stop }
 
 	clear {
 		this.pattern.clear;
