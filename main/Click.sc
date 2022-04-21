@@ -85,7 +85,7 @@ AbstractClick {
 				if(item == 2,{\note},{\rest})
 			})
 		});
-		^cueBar
+		^cueBar;
 	}
 
 	play { ^this.pattern.play }
@@ -128,6 +128,7 @@ Click : AbstractClick {
 		^Pbind(
 			\instrument, \clickSynth,
 			\dur, Pseq([ dur ],inf),
+			\type, \grain,
 			\freq, Pseq(1000 * barArray,repeats),
 			\amp, Pfunc({ amp.value }),       // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
 			\outBus, Pfunc({ out }),
@@ -159,6 +160,7 @@ ClickCue : AbstractClick {
 			Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseq([ dur ],inf),
+				\type,\grain,
 				\freq,Pseq(1000 * barArray,repeats),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
@@ -167,7 +169,7 @@ ClickCue : AbstractClick {
 			Pbind(
 				\instrument, \clickCuePlayback,
 				\dur, Pseq([ dur ],inf),
-				\type, Pseq(cueBar,repeats),
+				\type, Pseq(cueBar,repeats),                      // this could maybe be optimized? For a bar of 4/4 it plays 4 events, 1 \note and 3 silent \rest events....
 				\bufnum, Pfunc({ cueBuf }),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
@@ -531,7 +533,7 @@ ClickConCatLoop : AbstractClick {
 		var durs = clickArray.collect({ |clk|
 			clk.duration
 		});
-		durs = durs.sum * repeats;
+		durs = durs.sum;
 		^durs
 	}
 }
