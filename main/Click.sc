@@ -18,6 +18,7 @@ AbstractClick {
 
 			ServerBoot.add({ |server|
 				var pathToSounds = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds/";
+
 				PathName(pathToSounds).entries.do({ |entry|
 					var key = entry.fileNameWithoutExtension.asSymbol;
 					var value = Buffer.read(server,entry.fullPath);
@@ -27,7 +28,7 @@ AbstractClick {
 			},\default);
 
 			SynthDef(\clickSynth,{
-				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1.0,\curve.kr(-4)).kr(2);
+				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1,\curve.kr(-4)).kr(2);
 				var sig = LFTri.ar(\freq.kr(1000));
 				sig = sig * env * \amp.kr(0.5);
 				OffsetOut.ar(\outBus.kr(0),sig);
@@ -66,7 +67,7 @@ AbstractClick {
 		});
 
 		if(beatDiv > 1,{
-			var subDiv = Array.fill(beatDiv,{1});
+			var subDiv = Array.fill(beatDiv,{ 1 });
 			subDiv[0] = 1.5;
 			barArray = Array.fill(beats,subDiv);
 			barArray = barArray.flat;
@@ -75,7 +76,7 @@ AbstractClick {
 			if(beats == 1,{
 				barArray = [2]
 			},{
-				barArray = Array.fill(beats,{1});
+				barArray = Array.fill(beats,{ 1 });
 				barArray[0] = 2;
 			})
 		});
@@ -88,7 +89,7 @@ AbstractClick {
 		if(clickBar.size == 1,{
 			cueBar = [\note]
 		},{
-			cueBar = clickBar.collect({ |item, i|
+			cueBar = clickBar.collect({ |item|
 				if(item == 2,{ \note },{ \rest })
 			})
 		});
@@ -106,7 +107,7 @@ AbstractClick {
 
 	duration {
 		var beatDur = 60 / this.bpm;
-		var dur = beatDur * beats * repeats;
+		var dur     = beatDur * beats * repeats;
 		^dur
 	}
 
@@ -121,24 +122,24 @@ Click : AbstractClick {
 	}
 
 	init {
-		var prefix = this.makePrefix;
+		var prefix   = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray);
+		pattern      = this.makePattern(prefix, barArray);
 
 		all.put(key,pattern);
 	}
 
 	makePattern { |prefix, barArray|
 		var dur = 60 / (bpm * beatDiv);
-		key = ("c" ++ prefix).asSymbol;
+		key     = ("c" ++ prefix).asSymbol;
 
 		^Pbind(
 			\instrument, \clickSynth,
-			\dur, Pseq([ dur ],inf),
+			\dur, dur,
 			\type, \grain,
-			\freq, Pseq(clickFreq * barArray,repeats),
-			\amp, Pfunc({ amp.value }),       // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
-			\outBus, Pfunc({ out }),
+			\freq, Pseq( clickFreq * barArray, repeats ),
+			\amp, Pfunc({ amp.value }),       // allows me to pass both/either floats and {bus.getSynchronous}...a hack? Or exploiting polymorphism?!
+			\outBus, Pfunc({ out }),                                  // do I need the Pfunc here? Is this also for some bus trickery, or?
 		)
 	}
 }
@@ -150,35 +151,35 @@ ClickCue : AbstractClick {
 	}
 
 	init { |cueKey|
-		var prefix = this.makePrefix;
+		var prefix   = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray, cueKey);
+		pattern      = this.makePattern(prefix, barArray, cueKey);
 
 		all.put(key,pattern);
 	}
 
 	makePattern { |prefix, barArray, cueKey|
-		var dur = 60 / (bpm * beatDiv);
+		var dur    = 60 / (bpm * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
-		var cue = cueBufs[cueKey];
+		var cue    = cueBufs[cueKey];
 
 		key = ("q" ++ prefix).asSymbol;
 
 		^Ppar([
 			Pbind(
 				\instrument, \clickSynth,
-				\dur, Pseq([ dur ],inf),
+				\dur, dur,
 				\type,\grain,
-				\freq,Pseq(clickFreq * barArray,repeats),
+				\freq,Pseq( clickFreq * barArray, repeats ),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			),
 
 			Pbind(
 				\instrument, \clickCuePlayback,
-				\dur, Pseq([ dur ],inf),
-				\type, Pseq(cueBar,repeats),                      // this could maybe be optimized? For a bar of 4/4 it plays 4 events, 1 \note and 3 silent \rest events....
-				\bufnum, Pfunc({ cue }),
+				\dur, dur,
+				\type, Pseq( cueBar, repeats ),
+				\bufnum, Pfunc({ cue }),                                  // do I still need the Pfunc? It can just be cue, no?
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			)
@@ -196,25 +197,25 @@ ClickEnv : AbstractClick {
 	}
 
 	init { |bpmStartEnd, curve|
-		var prefix = this.makePrefix;
+		var prefix   = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray, bpmStartEnd, curve);
-		firstBpm = bpmStartEnd[0];
+		pattern      = this.makePattern(prefix, barArray, bpmStartEnd, curve);
+		firstBpm     = bpmStartEnd[0];
 
 		all.put(key,pattern);
 	}
 
 	makePattern { |prefix, barArray, bpmStartEnd, curve|
 		var strokes = beats * beatDiv;
-		var bpms = bpmStartEnd * beatDiv;
-		tempoArray = Array.fill(strokes,{ |i| i.lincurve(0, strokes-1, bpms[0], bpms[1], curve) });
+		var bpms    = bpmStartEnd * beatDiv;
+		tempoArray  = Array.fill(strokes,{ |i| i.lincurve(0, strokes - 1, bpms[0], bpms[1], curve) });
 
 		key = "%_%".format(prefix,curve).asSymbol;              // can I make better keys?
 
 		^Pbind(
 			\instrument, \clickSynth,
 			\dur, Pseq( 60 / tempoArray, repeats ),
-			\freq,Pseq( clickFreq * barArray,inf ),
+			\freq,Pseq( clickFreq * barArray, inf ),
 			\amp, Pfunc({ amp.value }),
 			\outBus, Pfunc({ out }),
 		)
@@ -224,8 +225,8 @@ ClickEnv : AbstractClick {
 
 	duration {
 		var durs = (60 / this.tempoArray).sum;
-		durs = durs * repeats;
-		durs = durs.round(0.01); // this will possibly create math discrepancies of up to 1ms...should I fix?
+		durs     = durs * repeats;
+		durs     =  durs.round(0.01);  // this will possibly create discrepancies of up to 1ms...should I fix?
 		^durs
 	}
 
@@ -246,17 +247,17 @@ ClickLoop : AbstractClick {
 	}
 
 	init { |loopKey|
-		var prefix = this.makePrefix;
+		var prefix   = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray, loopKey);
+		pattern      = this.makePattern(prefix, barArray, loopKey);
 
-		all.put(key,pattern);
-		loopCues.put(loopCue,true);
+		all.put(key, pattern);
+		loopCues.put(loopCue, true);
 	}
 
 	makePattern { |prefix, barArray, loopKey|
 		var dur = 60 / (bpm * beatDiv);
-		key = ("l" ++ prefix).asSymbol;
+		key     = ("l" ++ prefix).asSymbol;
 
 		if(loopKey.isNil,{
 			"no loopKey assigned: using pattern key".warn;
@@ -268,8 +269,8 @@ ClickLoop : AbstractClick {
 		if(repeats != inf,{
 			^Pbind(
 				\instrument, \clickSynth,
-				\dur, Pseq([ dur ],inf),
-				\freq, Pwhile({ loopCues.at(loopCue) }, Pseq(clickFreq * barArray,repeats)),
+				\dur, dur,
+				\freq, Pwhile({ loopCues.at(loopCue) }, Pseq( clickFreq * barArray, repeats )),
 				\amp, Pfunc({ amp.value }),
 				\outBus, Pfunc({ out }),
 			)
@@ -302,22 +303,22 @@ ClickMan : AbstractClick {
 	}
 
 	init { |bpmArray|
-		var prefix = this.makePrefix;
+		var prefix   = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray, bpmArray);
-		bpms = bpmArray;
+		pattern      = this.makePattern(prefix, barArray, bpmArray);
+		bpms         = bpmArray;
 
 		all.put(key,pattern);
 	}
 
 	makePattern { |prefix, barArray, bpmArray|
 		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
-		key = prefix.asSymbol;                                                                           // make more unique keys!!!
+		key     = prefix.asSymbol;                                                                           // make more unique keys!!!
 
 		^Pbind(
 			\instrument, \clickSynth,
-			\dur, Pseq(dur.flat,inf),
-			\freq, Pseq(clickFreq * barArray,repeats),
+			\dur, Pseq( dur.flat, inf ),
+			\freq, Pseq( clickFreq * barArray, repeats ),
 			\amp, Pfunc({ amp.value }),
 			\outBus, Pfunc({ out }),
 		);
@@ -327,7 +328,7 @@ ClickMan : AbstractClick {
 
 	duration {
 		var barDur = (60 / bpms).sum;
-		var dur = barDur * repeats;
+		var dur    = barDur * repeats;
 		^dur
 	}
 }
@@ -341,35 +342,34 @@ ClickManCue : AbstractClick {
 	}
 
 	init { |bpmArray,cueKey|
-		var prefix = this.makePrefix;
+		var prefix   = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray, bpmArray, cueKey);
-		bpms = bpmArray;
+		pattern      = this.makePattern(prefix, barArray, bpmArray, cueKey);
+		bpms         = bpmArray;
 
 		all.put(key,pattern);
 	}
 
 	makePattern { |prefix, barArray, bpmArray, cueKey|
-		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
+		var dur    = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
-		var cue = cueBufs[cueKey];
-
-		key = prefix.asSymbol;                                                   // make more unique keys!!!
+		var cue    = cueBufs[cueKey];
+		key        = prefix.asSymbol;                                                   // make more unique keys!!!
 
 		^Ppar([
 			Pbind(
 				\instrument, \clickSynth,
-				\dur, Pseq(dur.flat,inf),
-				\freq, Pseq(clickFreq * barArray,repeats),
+				\dur, Pseq( dur.flat, inf ),
+				\freq, Pseq( clickFreq * barArray, repeats ),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			),
 
 			Pbind(
 				\instrument, \clickCuePlayback,
-				\dur, Pseq(dur.flat,inf),
-				\type, Pseq(cueBar,repeats),
-				\bufnum, Pfunc({ cue }),                            // fix this!
+				\dur, Pseq( dur.flat, inf ),
+				\type, Pseq( cueBar, repeats ),
+				\bufnum, Pfunc({ cue }),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			)
@@ -380,7 +380,7 @@ ClickManCue : AbstractClick {
 
 	duration {
 		var barDur = (60 / bpms).sum;
-		var dur = barDur * repeats;
+		var dur    = barDur * repeats;
 		^dur
 	}
 }
@@ -393,23 +393,23 @@ ClickRest : AbstractClick {
 
 	init {
 		var prefix = this.makePrefix;
-		pattern = this.makePattern(prefix);
+		pattern    = this.makePattern(prefix);
 
 		all.put(key,pattern);
 	}
 
 	makePattern { |prefix|
 		var dur = (60 / bpm) * beats;
-		key = ("shh" ++ prefix).asSymbol;
+		key     = ("shh" ++ prefix).asSymbol;
 
 		^Pbind(
-			\dur, Pseq([ Rest(dur) ],repeats),
+			\dur, Pseq([ Rest(dur) ], repeats ),
 			\outBus, Pfunc({ out }),
 		);
 	}
 }
 
-/* === not sure what to call these....pseudoClicks? MetaClicks? === */
+/* === not sure what to call these....pseudoClicks? ClickWrappers === */
 
 ClickConCat : AbstractClick {
 
@@ -420,19 +420,19 @@ ClickConCat : AbstractClick {
 	}
 
 	init { |reps, clicks|
-		repeats = reps;
+		repeats    = reps;
 		clickArray = clicks.asArray.flat;     // this flattens things...but could perhaps handle parallel patterns??? Could be nice..
 		this.makeConCatKey;
-		pattern = this.makePattern(key,repeats);
+		pattern    = this.makePattern(key,repeats);
 
 		all.put(key,pattern);
 	}
 
 	makeConCatKey {
-		var newKey = "cc%".format(repeats.asString);
+		var newKey    = "cc%".format(repeats.asString);
 		var clickKeys = clickArray.deepCollect(3,{ |clk| clk.key });
 		clickKeys.do({ |clkKey| newKey = newKey ++ clkKey.asString});
-		key = newKey.removeEvery("_").asSymbol;
+		key           = newKey.removeEvery("_").asSymbol;
 
 		^key
 	}
@@ -445,7 +445,7 @@ ClickConCat : AbstractClick {
 
 	bpm { ^clickArray.first.bpm }
 
-	beats { ^this }
+	beats   { ^this }
 	beatDiv { ^this }
 
 	amp_ { |val|
@@ -486,17 +486,17 @@ ClickConCatLoop : AbstractClick {
 	init { |loopKey, clicks|
 		clickArray = clicks.asArray.flat;                // this flattens things...but could perhaps handle parallel patterns??? Could be nice..
 		this.makeConCatKey;
-		pattern = this.makePattern(key,loopKey);
+		pattern    = this.makePattern(key,loopKey);
 
 		all.put(key,pattern);
 		loopCues.put(loopCue,true);
 	}
 
 	makeConCatKey {
-		var newKey = "cl";                                                 // make more unique key!!!
+		var newKey    = "cl";                                                 // make more unique key!!!
 		var clickKeys = clickArray.deepCollect(3,{ |clk| clk.key });
 		clickKeys.do({ |clkKey| newKey = newKey ++ clkKey.asString});
-		key = newKey.removeEvery("_").asSymbol;
+		key           = newKey.removeEvery("_").asSymbol;
 
 		^key
 	}
@@ -516,7 +516,7 @@ ClickConCatLoop : AbstractClick {
 
 	bpm { ^clickArray.first.bpm }
 
-	beats { ^this }
+	beats   { ^this }
 	beatDiv { ^this }
 	repeats { ^this }
 
