@@ -1,28 +1,34 @@
 AbstractClick {
 
-	classvar <all, <loopCues, <cueBuf;
+	const clickFreq = 1000;
+
+	classvar <all, <loopCues, <cueBufs;
 	var <bpm, <beats, <beatDiv, <repeats, <>amp, <>out;
 	var <key, <pattern;
 
 	// add clock stuff.here?! Something like:
 	// clock = clock ? TempoClock.default;
 
-	*initClass{
-		all = IdentityDictionary();
+	*initClass {
+		all      = IdentityDictionary();
 		loopCues = IdentityDictionary();
-		// cueBufs = IdentityDictionary(); // load all buffers by key and be able to call them in the .new method...should it be gettable and settable
+		cueBufs  = IdentityDictionary();
 
 		StartUp.add{
 
 			ServerBoot.add({ |server|
-				var path = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds" +/+ "bell.wav";  // is this the best way to do this?
-				cueBuf = Buffer.read(server,path);
+				var pathToSounds = Platform.userExtensionDir +/+ "Tools/Click" +/+ "sounds/";
+				PathName(pathToSounds).entries.do({ |entry|
+					var key = entry.fileNameWithoutExtension.asSymbol;
+					var value = Buffer.read(server,entry.fullPath);
+
+					cueBufs.put(key,value);
+				});
 			},\default);
 
 			SynthDef(\clickSynth,{
 				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1.0,\curve.kr(-4)).kr(2);
 				var sig = LFTri.ar(\freq.kr(1000));
-				sig = LPF.ar(sig,8000);
 				sig = sig * env * \amp.kr(0.5);
 				OffsetOut.ar(\outBus.kr(0),sig);
 			}).add;
@@ -42,8 +48,9 @@ AbstractClick {
 			2,"e", // eighth
 			3,"t", // triplet
 			4,"s", // sixteenth
-			5,"f", // quintuplet (fives)
-			{ "Mike's laziness doesn't curently support more than quintuplet subdivisions".postln }
+			5,"f", // quintuplet ("fives")
+			6,"x", // sextuplet
+			{ "Mike's laziness doesn't curently support more than sextuplet subdivisions".postln }
 		);
 
 		^"%_%%%o%".format(bpm,beats,subDiv,repeats,out).asSymbol;
@@ -82,7 +89,7 @@ AbstractClick {
 			cueBar = [\note]
 		},{
 			cueBar = clickBar.collect({ |item, i|
-				if(item == 2,{\note},{\rest})
+				if(item == 2,{ \note },{ \rest })
 			})
 		});
 		^cueBar;
@@ -129,7 +136,7 @@ Click : AbstractClick {
 			\instrument, \clickSynth,
 			\dur, Pseq([ dur ],inf),
 			\type, \grain,
-			\freq, Pseq(1000 * barArray,repeats),
+			\freq, Pseq(clickFreq * barArray,repeats),
 			\amp, Pfunc({ amp.value }),       // a bit hacky maybe? allows me to pass both/either floats and {bus.getSynchronous}...
 			\outBus, Pfunc({ out }),
 		)
@@ -138,19 +145,19 @@ Click : AbstractClick {
 
 ClickCue : AbstractClick {
 
-	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
-		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init;
+	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, cueKey = 'bell',  amp = 0.5, out = 0|
+		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init(cueKey);
 	}
 
-	init {
+	init { |cueKey|
 		var prefix = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray);
+		pattern = this.makePattern(prefix, barArray, cueKey);
 
 		all.put(key,pattern);
 	}
 
-	makePattern { |prefix, barArray|
+	makePattern { |prefix, barArray, cueKey|
 		var dur = 60 / (bpm * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
 
@@ -161,7 +168,7 @@ ClickCue : AbstractClick {
 				\instrument, \clickSynth,
 				\dur, Pseq([ dur ],inf),
 				\type,\grain,
-				\freq,Pseq(1000 * barArray,repeats),
+				\freq,Pseq(clickFreq * barArray,repeats),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			),
@@ -170,7 +177,7 @@ ClickCue : AbstractClick {
 				\instrument, \clickCuePlayback,
 				\dur, Pseq([ dur ],inf),
 				\type, Pseq(cueBar,repeats),                      // this could maybe be optimized? For a bar of 4/4 it plays 4 events, 1 \note and 3 silent \rest events....
-				\bufnum, Pfunc({ cueBuf }),
+				\bufnum, Pfunc({ cueBufs['bell'] }),                      // fix this!
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			)
@@ -182,12 +189,12 @@ ClickEnv : AbstractClick {
 
 	var firstBpm, <tempoArray;
 
-	*new { |bpmStartEnd = #[60,120], beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, curve = 0|
-		if( bpmStartEnd.isArray.not or: {bpmStartEnd.size != 2},{"bpmStartEnd must be an Array of 2 values".throw} );
+	*new { |bpmStartEnd = #[60,120], beats = 1, beatDiv = 1, repeats = 1, curve = 0, amp = 0.5, out = 0|
+		if( bpmStartEnd.isArray.not or: { bpmStartEnd.size != 2 },{ "bpmStartEnd must be an Array of 2 values".throw } );
 		^super.newCopyArgs("%e%".format(bpmStartEnd[0], bpmStartEnd[1]), beats, beatDiv, repeats, amp, out).init(bpmStartEnd, curve);
 	}
 
-	init { |bpmStartEnd, curve, dur|
+	init { |bpmStartEnd, curve|
 		var prefix = this.makePrefix;
 		var barArray = this.makeBarArray;
 		pattern = this.makePattern(prefix, barArray, bpmStartEnd, curve);
@@ -205,8 +212,8 @@ ClickEnv : AbstractClick {
 
 		^Pbind(
 			\instrument, \clickSynth,
-			\dur, Pseq( 60/tempoArray,repeats ),
-			\freq,Pseq( 1000 * barArray,inf ),
+			\dur, Pseq( 60 / tempoArray, repeats ),
+			\freq,Pseq( clickFreq * barArray,inf ),
 			\amp, Pfunc({ amp.value }),
 			\outBus, Pfunc({ out }),
 		)
@@ -232,7 +239,7 @@ ClickLoop : AbstractClick {
 
 	var <loopCue;
 
-	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0, loopKey = nil|
+	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, loopKey = nil, amp = 0.5, out = 0|
 		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init(loopKey);
 
 	}
@@ -261,7 +268,7 @@ ClickLoop : AbstractClick {
 			^Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseq([ dur ],inf),
-				\freq, Pwhile({ loopCues.at(loopCue) }, Pseq(1000 * barArray,repeats)),
+				\freq, Pwhile({ loopCues.at(loopCue) }, Pseq(clickFreq * barArray,repeats)),
 				\amp, Pfunc({ amp.value }),
 				\outBus, Pfunc({ out }),
 			)
@@ -309,7 +316,7 @@ ClickMan : AbstractClick {
 		^Pbind(
 			\instrument, \clickSynth,
 			\dur, Pseq(dur.flat,inf),
-			\freq, Pseq(1000 * barArray,repeats),
+			\freq, Pseq(clickFreq * barArray,repeats),
 			\amp, Pfunc({ amp.value }),
 			\outBus, Pfunc({ out }),
 		);
@@ -351,7 +358,7 @@ ClickManCue : AbstractClick {
 			Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseq(dur.flat,inf),
-				\freq, Pseq(1000 * barArray,repeats),
+				\freq, Pseq(clickFreq * barArray,repeats),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			),
@@ -360,7 +367,7 @@ ClickManCue : AbstractClick {
 				\instrument, \clickCuePlayback,
 				\dur, Pseq(dur.flat,inf),
 				\type, Pseq(cueBar,repeats),
-				\bufnum, Pfunc({ cueBuf }),
+				\bufnum, Pfunc({ cueBufs['bell'] }),                            // fix this!
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			)
