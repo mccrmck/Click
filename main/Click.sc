@@ -145,8 +145,8 @@ Click : AbstractClick {
 
 ClickCue : AbstractClick {
 
-	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, cueKey = 'bell',  amp = 0.5, out = 0|
-		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init(cueKey);
+	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, cueKey = 'bell', amp = 0.5, out = 0|
+		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init(cueKey.asSymbol);
 	}
 
 	init { |cueKey|
@@ -160,6 +160,7 @@ ClickCue : AbstractClick {
 	makePattern { |prefix, barArray, cueKey|
 		var dur = 60 / (bpm * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
+		var cue = cueBufs[cueKey];
 
 		key = ("q" ++ prefix).asSymbol;
 
@@ -177,7 +178,7 @@ ClickCue : AbstractClick {
 				\instrument, \clickCuePlayback,
 				\dur, Pseq([ dur ],inf),
 				\type, Pseq(cueBar,repeats),                      // this could maybe be optimized? For a bar of 4/4 it plays 4 events, 1 \note and 3 silent \rest events....
-				\bufnum, Pfunc({ cueBufs['bell'] }),                      // fix this!
+				\bufnum, Pfunc({ cue }),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			)
@@ -335,22 +336,23 @@ ClickManCue : AbstractClick {
 
 	var bpms;
 
-	*new { |bpmArray = #[60], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
-		^super.newCopyArgs("manQ", bpmArray.size, beatDiv, repeats, amp, out).init(bpmArray);
+	*new { |bpmArray = #[60], beatDiv = 1, repeats = 1, cueKey = 'bell', amp = 0.5, out = 0|
+		^super.newCopyArgs("manQ", bpmArray.size, beatDiv, repeats, amp, out).init(bpmArray, cueKey.asSymbol);
 	}
 
-	init { |bpmArray|
+	init { |bpmArray,cueKey|
 		var prefix = this.makePrefix;
 		var barArray = this.makeBarArray;
-		pattern = this.makePattern(prefix, barArray, bpmArray);
+		pattern = this.makePattern(prefix, barArray, bpmArray, cueKey);
 		bpms = bpmArray;
 
 		all.put(key,pattern);
 	}
 
-	makePattern { |prefix, barArray, bpmArray|
+	makePattern { |prefix, barArray, bpmArray, cueKey|
 		var dur = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
+		var cue = cueBufs[cueKey];
 
 		key = prefix.asSymbol;                                                   // make more unique keys!!!
 
@@ -367,7 +369,7 @@ ClickManCue : AbstractClick {
 				\instrument, \clickCuePlayback,
 				\dur, Pseq(dur.flat,inf),
 				\type, Pseq(cueBar,repeats),
-				\bufnum, Pfunc({ cueBufs['bell'] }),                            // fix this!
+				\bufnum, Pfunc({ cue }),                            // fix this!
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			)
