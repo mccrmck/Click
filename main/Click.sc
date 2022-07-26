@@ -74,7 +74,7 @@ AbstractClick {
 			barArray[0] = 2;
 		},{
 			if(beats == 1,{
-				barArray = [2]
+				barArray = [1]
 			},{
 				barArray = Array.fill(beats,{ 1 });
 				barArray[0] = 2;
@@ -192,7 +192,9 @@ ClickEnv : AbstractClick {
 	var firstBpm, <tempoArray;
 
 	*new { |bpmStartEnd = #[60,120], beats = 1, beatDiv = 1, repeats = 1, curve = 0, amp = 0.5, out = 0|
-		if( bpmStartEnd.isArray.not or: { bpmStartEnd.size != 2 },{ "bpmStartEnd must be an Array of 2 values".throw } );
+		if( bpmStartEnd.isArray.not or: { bpmStartEnd.size != 2 },{
+			"bpmStartEnd must be an Array of 2 values".throw
+		});
 		^super.newCopyArgs("%e%".format(bpmStartEnd[0], bpmStartEnd[1]), beats, beatDiv, repeats, amp, out).init(bpmStartEnd, curve);
 	}
 
