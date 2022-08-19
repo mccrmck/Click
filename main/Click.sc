@@ -163,7 +163,7 @@ ClickCue : AbstractClick {
 		var cueBar = this.makeCueBar(barArray);
 		var cue    = cueBufs[cueKey];
 
-		key = ("q" ++ prefix).asSymbol;
+		key = (cueKey ++ prefix).asSymbol;
 
 		^Ppar([
 			Pbind(
