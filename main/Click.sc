@@ -228,7 +228,7 @@ ClickEnv : AbstractClick {
 	duration {
 		var durs = (60 / this.tempoArray).sum;
 		durs     = durs * repeats;
-		durs     =  durs.round(0.01);  // this will possibly create discrepancies of up to 1ms...should I fix?
+		// durs     =  durs.round(0.001);  // this will possibly create discrepancies of up to 1ms...should I fix?
 		^durs
 	}
 
