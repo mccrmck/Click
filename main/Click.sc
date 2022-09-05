@@ -9,6 +9,9 @@ AbstractClick {
 	// add clock stuff.here?! Something like:
 	// clock = clock ? TempoClock.default;
 
+	// the play / stop methods need to be revisited now that the classes are outputting Pbinds/Pseqs instead Pdefs
+	// do the play/stop methods maybe point an EventStreamPlayer that gets created with each class? TBD.....
+
 	*initClass {
 		all      = IdentityDictionary();
 		loopCues = IdentityDictionary();
@@ -74,7 +77,7 @@ AbstractClick {
 			barArray[0] = 2;
 		},{
 			if(beats == 1,{
-				barArray = [1]
+				barArray = [2]
 			},{
 				barArray = Array.fill(beats,{ 1 });
 				barArray[0] = 2;
