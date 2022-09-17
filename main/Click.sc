@@ -141,8 +141,8 @@ Click : AbstractClick {
 			\dur, dur,
 			\type, \grain,
 			\freq, Pseq( clickFreq * barArray, repeats ),
-			\amp, Pfunc({ amp.value }),       // allows me to pass both/either floats and {bus.getSynchronous}...a hack? Or exploiting polymorphism?!
-			\outBus, Pfunc({ out }),                                  // do I need the Pfunc here? Is this also for some bus trickery, or?
+			\amp, Pfunc({ amp.value }),               // allows me to pass both/either floats and {bus.getSynchronous}...a hack? Or exploiting polymorphism?!
+			\outBus, Pfunc({ out }),                  // do I need the Pfunc here? Is this also for some bus trickery, or?
 		)
 	}
 }
@@ -231,7 +231,6 @@ ClickEnv : AbstractClick {
 	duration {
 		var durs = (60 / this.tempoArray).sum;
 		durs     = durs * repeats;
-		// durs     =  durs.round(0.001);  // this will possibly create discrepancies of up to 1ms...should I fix?
 		^durs
 	}
 
