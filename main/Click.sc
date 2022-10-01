@@ -241,6 +241,70 @@ ClickEnv : AbstractClick {
 	}
 }
 
+ClickEnvCue : AbstractClick {
+
+	var firstBpm, <tempoArray;
+
+	*new { |bpmStartEnd = #[60,120], beats = 1, beatDiv = 1, repeats = 1, curve = 0, cueKey = 'bell', amp = 0.5, out = 0|
+		if( bpmStartEnd.isArray.not or: { bpmStartEnd.size != 2 },{
+			"bpmStartEnd must be an Array of 2 values".throw
+		});
+		^super.newCopyArgs("%e%".format(bpmStartEnd[0], bpmStartEnd[1]), beats, beatDiv, repeats, amp, out).init(bpmStartEnd, curve, cueKey.asSymbol);
+	}
+
+	init { |bpmStartEnd, curve, cueKey|
+		var prefix   = this.makePrefix;
+		var barArray = this.makeBarArray;
+		pattern      = this.makePattern(prefix, barArray, bpmStartEnd, curve, cueKey);
+		firstBpm     = bpmStartEnd[0];
+
+		all.put(key,pattern);
+	}
+
+	makePattern { |prefix, barArray, bpmStartEnd, curve, cueKey|
+		var strokes = beats * beatDiv;
+		var bpms    = bpmStartEnd * beatDiv;
+		var cueBar  = this.makeCueBar(barArray);
+		var cue     = cueBufs[cueKey];
+		tempoArray  = Array.fill(strokes,{ |i| i.lincurve(0, strokes - 1, bpms[0], bpms[1], curve) });
+
+		key = "%_%%".format(prefix,curve,cueKey).asSymbol;              // can I make better keys?
+
+		^Ppar([
+			Pbind(
+				\instrument, \clickSynth,
+				\dur, Pseq( 60 / tempoArray, repeats ),
+				\freq,Pseq( clickFreq * barArray, inf ),
+				\amp, Pfunc({ amp.value }),
+				\outBus, Pfunc({ out }),
+			),
+			Pbind(
+				\instrument, \clickCuePlayback,
+				\dur, Pseq( 60 / tempoArray, repeats ),
+				\type, Pseq( cueBar, repeats ),
+				\bufnum, Pfunc({ cue }),                                  // do I still need the Pfunc? It can just be cue, no?
+				\amp, Pfunc({ amp.value }) * -3.dbamp,
+				\outBus, Pfunc({ out }),
+			)
+		])
+	}
+
+	bpm { ^firstBpm }
+
+	duration {
+		var durs = (60 / this.tempoArray).sum;
+		durs     = durs * repeats;
+		^durs
+	}
+
+	plot {
+		(this.tempoArray / this.beatDiv).plot;
+
+		^this
+	}
+
+}
+
 ClickLoop : AbstractClick {
 
 	var <loopCue;
