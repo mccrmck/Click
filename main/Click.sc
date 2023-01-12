@@ -1,10 +1,10 @@
 AbstractClick {
 
-	const clickFreq = 1000;
-
 	classvar <all, <loopCues, <cueBufs;
 	var <bpm, <beats, <beatDiv, <repeats, <>amp, <>out;
 	var <key, <pattern;
+
+	var <>clickFreq = 1000;
 
 	// add clock stuff.here?! Something like:
 	// clock = clock ? TempoClock.default;
@@ -140,7 +140,7 @@ Click : AbstractClick {
 			\instrument, \clickSynth,
 			\dur, dur,
 			\type, \grain,
-			\freq, Pseq( clickFreq * barArray, repeats ),
+			\freq, Pfunc({ clickFreq }) * Pseq( barArray, repeats ),   // this works, but it's dumb, isn't it? Do I need to rethink this fucking class?!?!?
 			\amp, Pfunc({ amp.value }),               // allows me to pass both/either floats and {bus.getSynchronous}...a hack? Or exploiting polymorphism?!
 			\outBus, Pfunc({ out }),                  // do I need the Pfunc here? Is this also for some bus trickery, or?
 		)
@@ -173,7 +173,7 @@ ClickCue : AbstractClick {
 				\instrument, \clickSynth,
 				\dur, dur,
 				\type,\grain,
-				\freq,Pseq( clickFreq * barArray, repeats ),
+				\freq, Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			),
@@ -220,7 +220,7 @@ ClickEnv : AbstractClick {
 		^Pbind(
 			\instrument, \clickSynth,
 			\dur, Pseq( 60 / tempoArray, repeats ),
-			\freq,Pseq( clickFreq * barArray, inf ),
+			\freq, Pfunc({ clickFreq }) * Pseq( barArray, inf ),
 			\amp, Pfunc({ amp.value }),
 			\outBus, Pfunc({ out }),
 		)
@@ -274,7 +274,7 @@ ClickEnvCue : AbstractClick {
 			Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseq( 60 / tempoArray, repeats ),
-				\freq,Pseq( clickFreq * barArray, inf ),
+				\freq,Pfunc({ clickFreq }) * Pseq( barArray, inf ),
 				\amp, Pfunc({ amp.value }),
 				\outBus, Pfunc({ out }),
 			),
@@ -338,7 +338,7 @@ ClickLoop : AbstractClick {
 			^Pbind(
 				\instrument, \clickSynth,
 				\dur, dur,
-				\freq, Pwhile({ loopCues.at(loopCue) }, Pseq( clickFreq * barArray, repeats )),
+				\freq, Pwhile({ loopCues.at(loopCue) }, Pfunc({ clickFreq }) * Pseq( barArray, repeats )),
 				\amp, Pfunc({ amp.value }),
 				\outBus, Pfunc({ out }),
 			)
@@ -386,7 +386,7 @@ ClickMan : AbstractClick {
 		^Pbind(
 			\instrument, \clickSynth,
 			\dur, Pseq( dur.flat, inf ),
-			\freq, Pseq( clickFreq * barArray, repeats ),
+			\freq, Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
 			\amp, Pfunc({ amp.value }),
 			\outBus, Pfunc({ out }),
 		);
@@ -428,7 +428,7 @@ ClickManCue : AbstractClick {
 			Pbind(
 				\instrument, \clickSynth,
 				\dur, Pseq( dur.flat, inf ),
-				\freq, Pseq( clickFreq * barArray, repeats ),
+				\freq, Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\outBus, Pfunc({ out }),
 			),
