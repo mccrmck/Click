@@ -40,7 +40,7 @@ AbstractClick {
 			SynthDef(\clickCuePlayback,{
 				var bufnum = \bufnum.kr();
 				var sig = PlayBuf.ar(1,bufnum,BufRateScale.kr(bufnum),doneAction: 2);
-				sig = sig * \amp.kr(0.5);
+				sig = sig * \amp.kr(0.25);
 				OffsetOut.ar(\outBus.kr(0),sig);
 			}).add;
 		}
