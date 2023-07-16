@@ -54,7 +54,8 @@ AbstractClick {
 			4,"s", // sixteenth
 			5,"f", // quintuplet ("fives")
 			6,"x", // sextuplet
-			{ "Mike's laziness doesn't curently support more than sextuplet subdivisions".postln }
+			7,"p", // septuplet
+			{ "Mike's laziness doesn't curently support more than septuplet subdivisions".postln }
 		);
 
 		^"%_%%%o%".format(bpm,beats,subDiv,repeats,out).asSymbol;
