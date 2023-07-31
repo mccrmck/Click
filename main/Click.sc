@@ -39,7 +39,7 @@ AbstractClick {
 
 			SynthDef(\clickCuePlayback,{
 				var bufnum = \bufnum.kr();
-				var sig = PlayBuf.ar(1,bufnum,BufRateScale.kr(bufnum),doneAction: 2); // can probably get rid of this dA for faster tempos - the Pbind will free
+				var sig = PlayBuf.ar(1,bufnum,BufRateScale.kr(bufnum),doneAction: 2); // can probably get rid of this dA - the Pbind will free
 				sig = sig * \amp.kr(0.25);
 				OffsetOut.ar(\outBus.kr(0),sig);
 			}).add;
