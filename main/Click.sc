@@ -9,8 +9,8 @@ AbstractClick {
 	// add clock stuff.here?! Something like:
 	// clock = clock ? TempoClock.default;
 
-	// the play / stop methods need to be revisited now that the classes are outputting Pbinds/Pseqs instead Pdefs
-	// do the play/stop methods maybe point an EventStreamPlayer that gets created with each class? TBD.....
+	// the play / stop methods need to be revisited now that the classes are returning Pbinds/Pseqs
+	// do the play/stop methods maybe return the EventStreamPlayer that gets created with each class? TBD.....
 
 	*initClass {
 		all      = IdentityDictionary();
@@ -31,7 +31,7 @@ AbstractClick {
 			},\default);
 
 			SynthDef(\clickSynth,{
-				var env = Env.perc(\atk.kr(0.01),\rls.kr(0.25),1,\curve.kr(-4)).kr(2);
+				var env = Env.perc(\atk.kr(0.001),\rls.kr(0.25),1,\curve.kr(-4)).kr(2);
 				var sig = LFTri.ar(\freq.kr(1000));
 				sig = sig * env * \amp.kr(0.25);
 				OffsetOut.ar(\outBus.kr(0),sig);
@@ -220,6 +220,7 @@ ClickEnv : AbstractClick {
 
 		^Pbind(
 			\instrument, \clickSynth,
+			\type, \grain,
 			\dur, Pseq( 60 / tempoArray, repeats ),
 			\freq, Pfunc({ clickFreq }) * Pseq( barArray, inf ),
 			\amp, Pfunc({ amp.value }),
@@ -361,6 +362,37 @@ ClickLoop : AbstractClick {
 	reset { loopCues.put(loopCue, true) }
 
 	release { loopCues.put(loopCue, false) }
+}
+
+ClickPTC : AbstractClick {
+
+	var <deltas;
+
+	*new { |onsetArray = #[0], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
+		var beats = (onsetArray.size - 1) / beatDiv;
+		^super.newCopyArgs("ptc", beats.asInteger, beatDiv, repeats, amp, out).init(onsetArray)
+	}
+
+	init { |onsetArray|
+		var prefix   = this.makePrefix;
+		var barArray = this.makeBarArray;
+		pattern      = this.makePattern(barArray, onsetArray);
+
+		// all.put(key,pattern);
+	}
+
+	makePattern { |barArray, onsetArray|
+		onsetArray = onsetArray.differentiate[1..];
+		deltas = onsetArray;
+
+		^Pbind(
+			\instrument, \clickSynth,
+			\dur, Pseq( onsetArray, inf ),
+			\freq, Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
+			\amp, Pfunc({ amp.value }),
+			\outBus, Pfunc({ out }),
+		);
+	}
 }
 
 ClickMan : AbstractClick {
