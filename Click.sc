@@ -19,7 +19,7 @@ AbstractClick {
 		StartUp.add{
 
 			ServerBoot.add({ |server|
-				var pathToSounds = Platform.userExtensionDir +/+ "Tools/Click/sounds/";
+				var pathToSounds = Click.filenameSymbol.asString.dirname +/+ "sounds/";
 
 				PathName(pathToSounds).entries.do({ |entry|
 					var cueName = entry.fileNameWithoutExtension.asSymbol;
@@ -36,8 +36,8 @@ AbstractClick {
 				OffsetOut.ar(\out.kr(0),sig);
 			}).add;
 
-			SynthDef(\clickCuePlayback,{
-				var bufnum = \bufnum.kr();
+			SynthDef(\clickCuePB,{
+				var bufnum = \buf.kr();
 				var sig = PlayBuf.ar(1,bufnum,BufRateScale.kr(bufnum),doneAction: 2);
 				sig = sig * \amp.kr(0.25);
 				OffsetOut.ar(\out.kr(0),sig);
@@ -142,12 +142,12 @@ ClickCue : AbstractClick {
 			),
 
 			Pbind(
-				\instrument, \clickCuePlayback,
-				\dur,   dur,
-				\type,  Pseq( cueBar, repeats ),
-				\bufnum,Pfunc({ cueBufs[cueKey] }),
-				\amp,   Pfunc({ amp.value }) * -3.dbamp,
-				\out,   Pfunc({ out }),
+				\instrument, \clickCuePB,
+				\dur, dur,
+				\type,Pseq( cueBar, repeats ),
+				\buf, Pfunc({ cueBufs[cueKey] }),
+				\amp, Pfunc({ amp.value }) * -3.dbamp,
+				\out, Pfunc({ out }),
 			)
 		])
 	}
@@ -219,10 +219,10 @@ ClickEnvCue : AbstractClick {
 				\out, Pfunc({ out }),
 			),
 			Pbind(
-				\instrument, \clickCuePlayback,
+				\instrument, \clickCuePB,
 				\dur, Pseq( 60 / tempoArray, repeats ),
-				\type, Pseq( cueBar, repeats ),
-				\bufnum, Pfunc({ cueBufs[cueKey] }),
+				\type,Pseq( cueBar, repeats ),
+				\buf, Pfunc({ cueBufs[cueKey] }),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\out, Pfunc({ out }),
 			)
@@ -264,7 +264,7 @@ ClickLoop : AbstractClick {                                            // this h
 			^Pbind(
 				\instrument, \clickSynth,
 				\dur, dur,
-				\freq, Pwhile({ loopCues.at(loopCue) }, Pfunc({ clickFreq }) * Pseq( barArray, repeats )),
+				\freq,Pwhile({ loopCues.at(loopCue) }, Pfunc({ clickFreq }) * Pseq( barArray, repeats )),
 				\amp, Pfunc({ amp.value }),
 				\out, Pfunc({ out }),
 			)
@@ -292,7 +292,7 @@ ClickPTC : AbstractClick {
 		^Pbind(
 			\instrument, \clickSynth,
 			\dur, Pseq( onsetArray, inf ),
-			\freq, Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
+			\freq,Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
 			\amp, Pfunc({ amp.value }),
 			\out, Pfunc({ out }),
 		);
@@ -317,7 +317,7 @@ ClickMan : AbstractClick {
 			\instrument, \clickSynth,
 			\type,\grain,
 			\dur, Pseq( dur.flat, inf ),
-			\freq, Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
+			\freq,Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
 			\amp, Pfunc({ amp.value }),
 			\out, Pfunc({ out }),
 		);
@@ -348,16 +348,16 @@ ClickManCue : AbstractClick {
 				\instrument, \clickSynth,
 				\type,\grain,
 				\dur, Pseq( dur.flat, inf ),
-				\freq, Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
+				\freq,Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\out, Pfunc({ out }),
 			),
 
 			Pbind(
-				\instrument, \clickCuePlayback,
+				\instrument, \clickCuePB,
 				\dur, Pseq( dur.flat, inf ),
-				\type, Pseq( cueBar, repeats ),
-				\bufnum, Pfunc({ cueBufs[cueKey] }),
+				\type,Pseq( cueBar, repeats ),
+				\buf, Pfunc({ cueBufs[cueKey] }),
 				\amp, Pfunc({ amp.value }) * -3.dbamp,
 				\out, Pfunc({ out }),
 			)
