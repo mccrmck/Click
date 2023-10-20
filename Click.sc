@@ -2,7 +2,7 @@ AbstractClick {
 
 	classvar <loopCues, <cueBufs;
 	var <bpm, <beats, <beatDiv, <repeats, <>amp, <>out;
-	var <pattern;
+	var <tempoArray, <pattern;
 
 	var <>clickFreq = 1000;
 
@@ -47,7 +47,7 @@ AbstractClick {
 
 	init {
 		var barArray = this.makeBarArray;
-		pattern      = this.makePattern(barArray);
+		pattern      = this.prMakePattern(barArray);
 	}
 
 	makeBarArray {
@@ -94,7 +94,7 @@ AbstractClick {
 	stop { ^this.pattern.stop }   // this doesn't work of course!!
 
 	duration {
-		var beatDur = 60 / this.bpm;
+		var beatDur = 60 / bpm;
 		^beatDur * beats * repeats;
 	}
 }
@@ -102,10 +102,13 @@ AbstractClick {
 Click : AbstractClick {
 
 	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
-		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).init;
+		var tempoArray = bpm.dup( beats * beatDiv ) * beatDiv;
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out, tempoArray).init;
 	}
 
-	makePattern { |barArray|
+	prMakePattern { |barArray|
 		var dur = 60 / (bpm * beatDiv);
 
 		^Pbind(
@@ -124,10 +127,14 @@ ClickCue : AbstractClick {
 	var <>cueKey;
 
 	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, cueKey = 'bell', amp = 0.5, out = 0|
-		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).cueKey_(cueKey.asSymbol).init;
+		var tempoArray = bpm.dup( beats * beatDiv ) * beatDiv;
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out, tempoArray)
+		.cueKey_(cueKey.asSymbol).init;
 	}
 
-	makePattern { |barArray|
+	prMakePattern { |barArray|
 		var dur    = 60 / (bpm * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
 
@@ -155,21 +162,20 @@ ClickCue : AbstractClick {
 
 ClickEnv : AbstractClick {
 
-	var >bpmArray, >curve;
-	var <tempoArray;
-
 	*new { |bpmStartEnd = #[60,120], beats = 1, beatDiv = 1, repeats = 1, curve = 0, amp = 0.5, out = 0|
+		var strokes, bpms, tempoArray;
 		if( bpmStartEnd.isArray.not or: { bpmStartEnd.size != 2 },{
 			"bpmStartEnd must be an Array of 2 values".throw
 		});
-		^super.newCopyArgs(bpmStartEnd, beats, beatDiv, repeats, amp, out)
-		.bpmArray_(bpmStartEnd).curve_(curve).init;
+		strokes = beats * beatDiv;
+		bpms    = bpmStartEnd * beatDiv;
+		tempoArray = Array.fill(strokes,{ |i| i.lincurve(0, strokes - 1, bpms[0], bpms[1], curve) });
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs(bpmStartEnd, beats, beatDiv, repeats, amp, out, tempoArray).init;
 	}
 
-	makePattern { |barArray|
-		var strokes = beats * beatDiv;
-		var bpms    = bpmArray * beatDiv;
-		tempoArray  = Array.fill(strokes,{ |i| i.lincurve(0, strokes - 1, bpms[0], bpms[1], curve) });
+	prMakePattern { |barArray|
 
 		^Pbind(
 			\instrument, \clickSynth,
@@ -192,22 +198,22 @@ ClickEnv : AbstractClick {
 ClickEnvCue : AbstractClick {
 
 	var <>cueKey;
-	var >bpmArray, >curve;
-	var <tempoArray;
 
 	*new { |bpmStartEnd = #[60,120], beats = 1, beatDiv = 1, repeats = 1, curve = 0, cueKey = 'bell', amp = 0.5, out = 0|
+		var strokes, bpms, tempoArray;
 		if( bpmStartEnd.isArray.not or: { bpmStartEnd.size != 2 },{
 			"bpmStartEnd must be an Array of 2 values".throw
 		});
-		^super.newCopyArgs(bpmStartEnd, beats, beatDiv, repeats, amp, out)
-		.cueKey_(cueKey.asSymbol).bpmArray_(bpmStartEnd).curve_(curve).init;
+		strokes = beats * beatDiv;
+		bpms    = bpmStartEnd * beatDiv;
+		tempoArray = Array.fill(strokes,{ |i| i.lincurve(0, strokes - 1, bpms[0], bpms[1], curve) });
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs(bpmStartEnd, beats, beatDiv, repeats, amp, out, tempoArray).cueKey_(cueKey.asSymbol).init;
 	}
 
-	makePattern { |barArray|
-		var strokes = beats * beatDiv;
-		var bpms    = bpmArray * beatDiv;
+	prMakePattern { |barArray|
 		var cueBar  = this.makeCueBar(barArray);
-		tempoArray  = Array.fill(strokes,{ |i| i.lincurve(0, strokes - 1, bpms[0], bpms[1], curve) });
 
 		^Ppar([
 			Pbind(
@@ -238,12 +244,15 @@ ClickEnvCue : AbstractClick {
 
 }
 
-ClickLoop : AbstractClick {                                            // this has not been touched yet
+ClickLoop : AbstractClick {
 
 	var <>loopCue;
 
 	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1, loopKey = nil, amp = 0.5, out = 0|
-		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out).loopCue_(loopKey).init;
+		var tempoArray = bpm.dup( beats * beatDiv ) * beatDiv;
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs(bpm, beats, beatDiv, repeats, amp, out, tempoArray).loopCue_(loopKey).init;
 	}
 
 	keyCheck {
@@ -256,7 +265,7 @@ ClickLoop : AbstractClick {                                            // this h
 		loopCues.put(loopCue, true);
 	}
 
-	makePattern { |barArray|
+	prMakePattern { |barArray|
 		var dur = 60 / (bpm * beatDiv);
 		this.keyCheck;
 
@@ -274,44 +283,17 @@ ClickLoop : AbstractClick {                                            // this h
 	}
 }
 
-// made to handle PolyTempoComposer output (ie. arrays of onsets like: [ 0, 0.791, 1.469, 2.069, 2.615, 3.2 ] )
-ClickPTC : AbstractClick {
-
-	var >onsetArray;
-	var <deltas;
-
-	*new { |onsetArray = #[0], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
-		var beats = (onsetArray.size - 1) / beatDiv;
-		^super.newCopyArgs('ptc', beats.asInteger, beatDiv, repeats, amp, out).onsetArray_(onsetArray).init
-	}
-
-	makePattern { |barArray|
-		onsetArray = onsetArray.differentiate[1..];
-		deltas = onsetArray;
-
-		^Pbind(
-			\instrument, \clickSynth,
-			\dur, Pseq( onsetArray, inf ),
-			\freq,Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
-			\amp, Pfunc({ amp.value }),
-			\out, Pfunc({ out }),
-		);
-	}
-
-	duration { ^deltas.sum }
-}
-
 ClickMan : AbstractClick {
 
-	var >bpmArray;
-
 	*new { |bpmArray = #[60], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
-		^super.newCopyArgs(bpmArray[0], bpmArray.size, beatDiv, repeats, amp, out)
-		.bpmArray_(bpmArray).init;
+		var tempoArray = bpmArray.dupEach(beatDiv) * beatDiv;
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs(bpmArray[0], bpmArray.size, beatDiv, repeats, amp, out, tempoArray).init;
 	}
 
-	makePattern { |barArray|
-		var dur = 60 / (bpmArray.dupEach(beatDiv) * beatDiv);
+	prMakePattern { |barArray|
+		var dur = 60 / (tempoArray.dupEach(beatDiv) * beatDiv);
 
 		^Pbind(
 			\instrument, \clickSynth,
@@ -324,7 +306,7 @@ ClickMan : AbstractClick {
 	}
 
 	duration {
-		var barDur = (60 / bpmArray).sum;
+		var barDur = (60 / tempoArray).sum;
 		^barDur * repeats;
 	}
 }
@@ -332,15 +314,17 @@ ClickMan : AbstractClick {
 ClickManCue : AbstractClick {
 
 	var <>cueKey;
-	var >bpmArray;
 
 	*new { |bpmArray = #[60], beatDiv = 1, repeats = 1, cueKey = 'bell', amp = 0.5, out = 0|
-		^super.newCopyArgs(bpmArray[0], bpmArray.size, beatDiv, repeats, amp, out)
-		.bpmArray_(bpmArray).cueKey_(cueKey.asSymbol).init;
+		var tempoArray = bpmArray.dupEach(beatDiv) * beatDiv;
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs(bpmArray[0], bpmArray.size, beatDiv, repeats, amp, out, tempoArray)
+		.cueKey_(cueKey.asSymbol).init;
 	}
 
-	makePattern { |barArray|
-		var dur    = 60 / (bpmArray.stutter(beatDiv) * beatDiv);
+	prMakePattern { |barArray|
+		var dur    = 60 / (tempoArray.stutter(beatDiv) * beatDiv);
 		var cueBar = this.makeCueBar(barArray);
 
 		^Ppar([
@@ -365,22 +349,51 @@ ClickManCue : AbstractClick {
 	}
 
 	duration {
-		var barDur = (60 / bpmArray).sum;
+		var barDur = (60 / tempoArray).sum;
 		^barDur * repeats;
 	}
 }
 
+// made to receive PolyTempoComposer output (ie. arrays of onsets like: [ 0, 0.791, 1.469, 2.069, 2.615, 3.2 ] )
+// beatDiv only marks accents for the click
+ClickPTC : AbstractClick {
+
+	*new { |onsetArray = #[0], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
+		var beats = (onsetArray.size - 1) / beatDiv;
+		var tempoArray = 60/onsetArray.differentiate[1..];
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs('ptc', beats.asInteger, beatDiv, repeats, amp, out, tempoArray).init
+	}
+
+	prMakePattern { |barArray|
+
+		^Pbind(
+			\instrument, \clickSynth,
+			\dur, Pseq( 60 / tempoArray, inf ),
+			\freq,Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
+			\amp, Pfunc({ amp.value }),
+			\out, Pfunc({ out }),
+		);
+	}
+
+	duration { ^(60/tempoArray).sum }
+}
+
 ClickRest : AbstractClick {
 
-	*new { |bpm = 60, beats = 1, repeats = 1|
-		^super.newCopyArgs(bpm, beats, 1, repeats, 0, 0).init;     // is there a better way to handle amp, out args?
+	*new { |bpm = 60, beats = 1, beatDiv = 1, repeats = 1|
+		var tempoArray = bpm.dup( beats * beatDiv ) * beatDiv;
+		tempoArray = tempoArray.dup( repeats ).flat;
+
+		^super.newCopyArgs(bpm, beats, beatDiv, repeats, 0, 0,tempoArray).init;     // is there a better way to handle amp, out args?
 	}
 
 	init {
-		pattern = this.makePattern;
+		pattern = this.prMakePattern;
 	}
 
-	makePattern {
+	prMakePattern {
 		var dur = (60 / bpm) * beats;
 		^Pbind( \dur, Pseq([ Rest(dur) ], repeats ) );
 	}
@@ -399,10 +412,10 @@ ClickConCat : AbstractClick {
 	init { |reps, clicks|
 		repeats    = reps;
 		clickArray = clicks.asArray.flat;
-		pattern    = this.makePattern( reps );
+		pattern    = this.prMakePattern( reps );
 	}
 
-	makePattern { |repeats|
+	prMakePattern { |repeats|
 		var sumArray = clickArray.deepCollect(3,{ |clk| clk.pattern });
 		^Pseq(sumArray,repeats);
 	}
@@ -425,6 +438,27 @@ ClickConCat : AbstractClick {
 		var durs = clickArray.collect({ |clk| clk.duration });
 		^durs.sum * repeats;
 	}
+
+	tempoArray {
+		var tempi = clickArray.collect({ |clk| clk.tempoArray }).flat;
+		^ tempi.dup( repeats ).flat
+	}
+
+	exportMIDItempoMap { |path, verbose = false|
+		var tempi = this.tempoArray;
+		var times = (60 / tempi).integrate;
+		var file = SimpleMIDIFile( path.asString ).init0(tempi[0],"4/4");
+		file.timeMode = \seconds;
+		times = times.rotate[0] = 0;
+
+		times.do({ |time, i|
+
+			[tempi[i],time].postln;
+			file.addTempo(tempi[i],time)
+		});
+		file.adjustEndOfTrack;
+		file.write
+	}
 }
 
 ClickConCatLoop : AbstractClick {
@@ -437,7 +471,13 @@ ClickConCatLoop : AbstractClick {
 
 	init { |clicks|
 		clickArray = clicks.asArray.flat;
-		pattern    = this.makePattern;
+		pattern    = this.prMakePattern;
+	}
+
+	prMakePattern { |key, loopKey|
+		var sumArray = clickArray.deepCollect(3,{ |clk| clk.pattern });
+		this.keyCheck;
+		^Pwhile({ loopCues.at(loopCue) }, Pseq(sumArray) );
 	}
 
 	keyCheck {
@@ -448,12 +488,6 @@ ClickConCatLoop : AbstractClick {
 		});
 
 		loopCues.put(loopCue, true);
-	}
-
-	makePattern { |key, loopKey|
-		var sumArray = clickArray.deepCollect(3,{ |clk| clk.pattern });
-		this.keyCheck;
-		^Pwhile({ loopCues.at(loopCue) }, Pseq(sumArray) );
 	}
 
 	bpm     { ^clickArray.first.bpm }
