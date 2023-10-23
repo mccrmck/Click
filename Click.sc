@@ -447,17 +447,16 @@ ClickConCat : AbstractClick {
 	exportMIDItempoMap { |path, verbose = false|
 		var tempi = this.tempoArray;
 		var times = (60 / tempi).integrate;
-		var file = SimpleMIDIFile( path.asString ).init0(tempi[0],"4/4");
+		var file = SimpleMIDIFile( path.asString ).init0( tempi.first );
 		file.timeMode = \seconds;
-		times = times.rotate[0] = 0;
+		times = times.rotate;
+		times[0] = 0;
 
 		times.do({ |time, i|
-
-			[tempi[i],time].postln;
+			if(verbose,{ [tempi[i], time].postln });
 			file.addTempo(tempi[i],time)
 		});
-		file.adjustEndOfTrack;
-		file.write
+		file.write;
 	}
 }
 
