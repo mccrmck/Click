@@ -1,3 +1,3 @@
 # Click
  
-Some fun classes for making click tracks
+Some fun SuperCollider classes for making click tracks
