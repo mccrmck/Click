@@ -30,7 +30,7 @@ AbstractClick {
             },\default);
 
             SynthDef(\clickSynth,{
-                var env = Env.perc(0.001, 0.25).kr(2);
+                var env = Env.perc(0.001, 0.25).ar(2);
                 var sig = LFTri.ar(\freq.kr(1000));
                 sig = sig * env * \amp.kr(0.25);
                 OffsetOut.ar(\out.kr(0),sig);
@@ -53,19 +53,23 @@ AbstractClick {
     makeBarArray {
         var barArray;
 
-        if(beats.isInteger.not || beatDiv.isInteger.not,{
-            beats = beats.floor;
-            beatDiv = beatDiv.floor;
-            "beats and beatDiv must be integers - they've been floored".warn;
+        if(beats.frac > 0,{
+            "beats is not an integer - it will get rounded".warn;
+        });
+
+        if(beatDiv.isInteger.not,{
+            beatDiv = beatDiv.round;
+            "beatDiv must be an integer - it will get rounded".warn;
         });
 
         if(beatDiv > 1,{
             var subDiv = Array.fill(beatDiv,{ 1 });
             subDiv[0] = 1.5;
-            barArray = Array.fill(beats,subDiv);
+            barArray = Array.fill(beats.max(1),subDiv);
             barArray = barArray.flat;
             barArray[0] = 2;
         },{
+            
             if(beats == 1,{
                 barArray = [2]
             },{
@@ -362,7 +366,7 @@ duration {
 }
 
 // made to receive PolyTempoComposer output (ie. arrays of onsets like: [ 0, 0.791, 1.469, 2.069, 2.615, 3.2 ] )
-// beatDiv only marks accents for the click
+// beatDiv gives accent pattern
 ClickPTC : AbstractClick {
 
     *new { |onsetArray = #[0], beatDiv = 1, repeats = 1, amp = 0.5, out = 0|
@@ -370,16 +374,20 @@ ClickPTC : AbstractClick {
     var tempoArray = 60/onsetArray.differentiate[1..];
     var reps = if(repeats == inf,{ 1 },{ repeats });
     tempoArray = tempoArray.dup( reps ).flat;
-
-    ^super.newCopyArgs('ptc', beats.asInteger, beatDiv, repeats, amp, out, tempoArray).init
+    
+    ^super.newCopyArgs('ptc', beats, beatDiv, repeats, amp, out, tempoArray).init
 }
 
 prMakePattern { |barArray|
+    var beatPat = (beats * beatDiv).asInteger.collect({ |i| 
+        if( i % beatDiv == 0,{ 1.5 },{ 1 })
+    });
+    beatPat[0] = 2;
 
     ^Pbind(
         \instrument, \clickSynth,
-        \dur, Pseq( 60 / tempoArray, inf ),
-        \freq,Pfunc({ clickFreq }) * Pseq( barArray, repeats ),
+        \dur, Pseq( 60 / tempoArray, repeats),
+        \freq,Pfunc({ clickFreq }) * Pseq( beatPat, inf),
         \amp, Pfunc({ amp.value }),
         \out, Pfunc({ out }),
     );
