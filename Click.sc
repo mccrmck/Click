@@ -30,7 +30,7 @@ AbstractClick {
             },\default);
 
             SynthDef(\clickSynth,{
-                var env = Env.perc(0.001, 0.25).ar(2);
+                var env = Env.perc(\atk.kr(0.001), \rls.kr(0.25),1,\curve.kr(-4)).ar(2);
                 var sig = LFTri.ar(\freq.kr(1000));
                 sig = sig * env * \amp.kr(0.25);
                 OffsetOut.ar(\out.kr(0),sig);
