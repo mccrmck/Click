@@ -178,6 +178,7 @@ ClickEnv : AbstractClick {
         bpms    = bpmStartEnd * beatDiv;
         tempoArray = Array.fill(strokes,{ |i| i.lincurve(0, strokes - 1, bpms[0], bpms[1], curve) });
         tempoArray = tempoArray.dup( reps ).flat;
+        tempoArray.postln;
     
         ^super.newCopyArgs(bpmStartEnd, beats, beatDiv, repeats, amp, out, tempoArray).init;
     }
@@ -187,7 +188,7 @@ ClickEnv : AbstractClick {
         ^Pbind(
             \instrument, \clickSynth,
             \type,\grain,
-            \dur, Pseq( 60 / tempoArray, repeats ),
+            \dur, Pseq( 60 / tempoArray/*, repeats */ ),
             \freq,Pfunc({ clickFreq }) * Pseq( barArray, inf ),
             \amp, Pfunc({ amp.value }),
             \out, Pfunc({ out }),
@@ -227,7 +228,7 @@ ClickEnvCue : AbstractClick {
             Pbind(
                 \instrument, \clickSynth,
                 \type,\grain,
-                \dur, Pseq( 60 / tempoArray, repeats ),
+                \dur, Pseq( 60 / tempoArray /*, repeats */ ),
                 \freq,Pfunc({ clickFreq }) * Pseq( barArray, inf ),
                 \amp, Pfunc({ amp.value }),
                 \out, Pfunc({ out }),
